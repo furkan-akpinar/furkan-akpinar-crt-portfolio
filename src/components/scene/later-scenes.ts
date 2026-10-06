@@ -7,22 +7,28 @@ import { createPaperUI } from "./paper-ui";
 import { paperScrollOffset, type CanvasActionBounds } from "./paper-action";
 import { curlFrame, curlVertex } from "./page-curl-geometry";
 import { ABOUT_CURL_START, sampleCurlProgress } from "@/lib/about-curl";
+import { createResourceScope } from "./resource-scope";
 
 type LaterId = "contact";
 const clamp = (n: number) => THREE.MathUtils.clamp(n, 0, 1);
 
 /** Dependency-ordered later scenes. The calling pipeline owns the final header/CRT pass. */
 export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number) {
+  const scope = createResourceScope();
+  try { return buildLaterScenes(renderer, width, height, scope); }
+  catch (error) { scope.dispose(); throw error; }
+}
+
+function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number, scope: ReturnType<typeof createResourceScope>) {
   let w = width, h = height, aspect = w / h, disposed = false;
-  const owned: { dispose(): void }[] = [];
-  const own = <T extends { dispose(): void }>(resource: T): T => { owned.push(resource); return resource; };
+  const own = scope.own;
   const sourceTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
   const nextTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
-  const paper = createPaperUI(w, h);
+  const paper = own(createPaperUI(w, h));
   const paperActionBounds: CanvasActionBounds | null = null;
   let lastCurl = -1;
   const ids: LaterId[] = ["contact"];
-  const ui = Object.fromEntries(ids.map(id => [id, createCanvasUI(w, h)])) as Record<LaterId, ReturnType<typeof createCanvasUI>>;
+  const ui = Object.fromEntries(ids.map(id => [id, own(createCanvasUI(w, h))])) as Record<LaterId, ReturnType<typeof createCanvasUI>>;
   const uiKeys = new Map<LaterId, string>();
   const plane = own(new THREE.PlaneGeometry(2, 2));
   const uiCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 20); uiCamera.position.z = 5;
@@ -33,13 +39,13 @@ export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number,
   blueMaterial.colorNode = mix(color("#302769"), color("#282828"), uv().y.smoothstep(0,0.41));
   blueBackground.add(new THREE.Mesh(plane, blueMaterial));
   const copyMaterial = own(new THREE.MeshBasicNodeMaterial({ depthTest: false, depthWrite: false }));
-  const copyQuad = new THREE.QuadMesh(copyMaterial);
+  const copyQuad = own(new THREE.QuadMesh(copyMaterial));
   const uiScenes = Object.fromEntries(ids.map(id => {
     const scene = new THREE.Scene();
     scene.add(new THREE.Mesh(plane, own(new THREE.MeshBasicNodeMaterial({ map: ui[id].texture, transparent: true, depthTest: false, depthWrite: false }))));
     return [id, scene];
   })) as Record<LaterId, THREE.Scene>;
-  const diagnostics = { passes: [] as string[], scene: "office" as SceneId, progress: 0, curl: 0, assetErrors: [] as string[], proxies: ["articulated still-image crowd", "video-calibrated intact page curl"], motion: {clapPhase:0.5,handshakeFrame:0,handshakeBlend:0,opening:0} };
+  const diagnostics = { passes: [] as string[], scene: "about-us" as SceneId, progress: 0, curl: 0, assetErrors: [] as string[], proxies: ["video-calibrated intact page curl"] };
 
   function drawUI(id: LaterId, progress: number, runtime: SceneRuntime) {
     const key = `${w}/${h}/${Math.round(progress * 500)}/${runtime.projectIndex}/${runtime.reducedMotion}`;
@@ -101,14 +107,14 @@ export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number,
     const p=clamp(progress);
     diagnostics.passes.length=0;diagnostics.scene=id;diagnostics.progress=p;diagnostics.curl=0;
     try{
-      if(id==='about-us'||id==='office'){
-        const q=id==='office'?0:sampleCurlProgress(p);diagnostics.curl=q;
+      if(id==='about-us'){
+        const q=sampleCurlProgress(p);diagnostics.curl=q;
         if(q>0){
           renderContact(0,runtime,nextTarget);
           if(runtime.reducedMotion){if(q<.5)renderPaper(1,outputTarget);else copy(nextTarget,outputTarget);diagnostics.passes.push('reduced-motion-cut');}
           else{renderPaper(1,sourceTarget);copy(nextTarget,outputTarget);if(q<1){updateCurl(q);renderer.render(curlScene,flatCamera);}diagnostics.passes.push('intact-page-curl');}
         }else renderPaper(p/ABOUT_CURL_START,outputTarget);
-      }else if(id==='contact'||id==='golden-tie'||id==='golden-tie-reveal')renderContact(p,runtime,outputTarget);
+      }else if(id==='contact')renderContact(p,runtime,outputTarget);
       else throw new Error(`Later scene renderer cannot render ${id}`);
     }finally{renderer.setRenderTarget(oldTarget);renderer.autoClear=oldAutoClear;}
   }
@@ -123,8 +129,7 @@ export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number,
   const ready = Promise.all([paper.ready]).then(() => undefined);
   return { render, resize, ready, diagnostics, get paperActionBounds() { return paperActionBounds; }, dispose() {
     if (disposed) return; disposed = true;
-    paper.dispose(); ids.forEach(id => ui[id].dispose());
-    owned.forEach(resource => resource.dispose()); copyQuad.dispose();
+    scope.dispose();
     for (const scene of [curlScene, paperScene, blueBackground, ...Object.values(uiScenes)]) scene.clear();
   } };
 }

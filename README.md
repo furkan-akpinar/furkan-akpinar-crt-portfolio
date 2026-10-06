@@ -104,11 +104,14 @@ Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun 
 ### Kaynakların yaşam döngüsü
 
 - Cihaz piksel oranı en fazla **1,5** olarak kullanılır.
+- Mobilde modelin **1024px**, masaüstünde **4K** dokuları seçilir. Geometri, malzemeler ve ışık düzeni ortaktır; ekran döndürülürken ikinci bir model yüklenmez.
 - Sahne çıktıları görünürlük ve geçiş ihtiyaçlarına göre üretilir.
 - Proje görselleri bir kez yüklenir; tekrar eden paneller aynı dokuları paylaşır.
+- Proje görselleri en fazla ikişer adet çözülür; çizimden sonra kaynak görüntüler serbest bırakılır. Mobil film dokuları 1024px, masaüstü dokuları 1536px genişliğindedir.
 - Başlık dokuları seçim veya ekran ölçüsü değiştiğinde güncellenir.
 - Video, görünmediğinde veya azaltılmış hareket tercih edildiğinde duraklatılır.
 - Geometri, materyal, doku, render hedefi ve olay dinleyicileri kapatılırken temizlenir.
+- Kurulum yarıda başarısız olduğunda oluşturulmuş kaynaklar da temizlenir. Aynı ölçüdeki resize bildirimleri yüzeyleri yeniden oluşturmaz.
 
 ## Etkileşim ve erişilebilirlik
 
@@ -122,7 +125,7 @@ Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun 
 
 `prefers-reduced-motion` tercihi çalışma sırasında izlenir. Sürekli hareketler, parallax ve video oynatımı azaltılır; ilgili geçişler sadeleştirilir. Canvas’ın yanında gerçek başlıklar, açıklamalar, bağlantılar, odak göstergeleri ve ekran okuyucu bildirimleri bulunur.
 
-Mobil menü, aktif bölüm bilgisi ve görünmeyen kontrollerin odak sırası ayrı yönetilir. GPU hatası, içerik ve bağlantıların kullanılamadığı boş bir ekrana dönüşmez.
+Mobil menü, aktif bölüm bilgisi ve görünmeyen kontrollerin odak sırası ayrı yönetilir. Yakalanabilen GPU kurulum veya cihaz kaybı hatalarında okunabilir içerik görünümüne geçilir. Tarayıcı sürecinin işletim sistemi tarafından kapatılması JavaScript hata yönetiminin dışındadır.
 
 ## Yerelde çalıştırma
 
@@ -177,7 +180,7 @@ Next.js uygulaması `output: 'export'` ile statik olarak üretilir. Cloudflare W
 
 Worker adı **`furkan-akpinar-crt-portfolio`** olarak yapılandırılır. Başka bir hesapta yayınlanacaksa Worker adı, statik varlık dizini ve canlı adresler ilgili yapılandırmadan birlikte güncellenmelidir.
 
-Cloudflare’ın dosya başına **25 MiB** sınırı için büyük bilgisayar GLB dosyası yayın hazırlığında glTF, binary veri ve görsel dosyalarına ayrılır. Bu işlem yeniden modelleme veya doku kalitesi düşürme yapmaz; 4K dokuların içerikleri korunur. Yayın paketi geliştirme kayıtlarından ayrı hazırlanır.
+Cloudflare’ın dosya başına **25 MiB** sınırı için büyük bilgisayar GLB dosyası yayın hazırlığında glTF, binary veri ve görsel dosyalarına ayrılır. Masaüstü 4K paketi özgün baytları korur; mobil paket aynı geometriyle 1024px doku türevleri kullanır. Her iki paketin hash ve dönüşüm kayıtları derlemede doğrulanır. Yayın paketi geliştirme kayıtlarından ayrı hazırlanır.
 
 ## Proje yapısı
 

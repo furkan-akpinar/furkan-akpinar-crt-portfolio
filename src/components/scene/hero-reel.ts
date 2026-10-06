@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { createProjectRecordings } from './project-recordings';
+import { createVideoTextures } from './video-textures';
 import {
   HERO_REEL_CELL_COUNT,
   HERO_REEL_CLIPS,
@@ -17,7 +17,7 @@ const ACTIVE_VIDEO = [0] as const;
 
 /** One decoder and one presentation clock for all six short hero clips. */
 export function createHeroReel() {
-  const recordings = createProjectRecordings([REEL_URL]);
+  const recordings = createVideoTextures([REEL_URL]);
   const video = recordings.videos[0];
   const texture = recordings.textures[0];
   texture.name = 'hero-short-video-reel';

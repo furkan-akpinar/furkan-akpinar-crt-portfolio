@@ -1,0 +1,19 @@
+Commodore 64 || Computer (Full Pack) — mobile texture derivative
+Creator: dark_igorek
+Creator page: https://sketchfab.com/dark_igorek
+Source: https://sketchfab.com/3d-models/commodore-64-computer-full-pack-1f43612fa2d54041bbe2bdff8164c2cd
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License link: https://creativecommons.org/licenses/by/4.0/
+
+Changes: textures reduced to at most 1024 × 1024 and encoded as PNG.
+Base colours are filtered in linear-light sRGB; normal and metallic/roughness
+channels are filtered as numeric data without gamma or luminance adjustments.
+Geometry, UVs, material settings and node transforms are unchanged. Geometry
+is shared with ../web/geometry.bin. The original 4K desktop package is intact.
+Runtime monitor/keyboard placement and screen replacement remain as described
+in ../ATTRIBUTION.txt. No endorsement by the creator is implied.
+
+Reproduce: node scripts/prepare-mobile-computer.mjs --generate
+Verify: node scripts/prepare-mobile-computer.mjs --verify
+conversion-manifest.json records source/output hashes, sizes and dimensions.
+Public attribution: /model-credits.html

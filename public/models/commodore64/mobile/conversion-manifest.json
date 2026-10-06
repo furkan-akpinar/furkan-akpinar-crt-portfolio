@@ -1,0 +1,527 @@
+{
+  "version": 1,
+  "source": {
+    "path": "../web/commodore-64-4k.gltf",
+    "bytes": 42101,
+    "sha256": "294decb77206c090638b78c55c66198a776e5894e9d2f36505097ea14193d486",
+    "originalGlbSha256": "4fcbfd31272c1e8da6e3148fb79863638781396c7f0c93a21089e427689bd27f"
+  },
+  "geometry": {
+    "path": "../web/geometry.bin",
+    "bytes": 9159116,
+    "sha256": "777c5424f006ca3e5e580c83454d17c6d33eccba31d0c9dcb2d5c59e2b56c4a5"
+  },
+  "conversion": {
+    "maxDimension": 1024,
+    "kernel": "lanczos3",
+    "encoding": "PNG; no palette quantization",
+    "baseColorFiltering": "linear-light sRGB",
+    "dataFiltering": "numeric RGB; no gamma, normalise or sharpening",
+    "geometryModified": false,
+    "materialSettingsModified": false,
+    "perFileLimitBytes": 26214400
+  },
+  "toolchain": {
+    "sharp": "0.35.5",
+    "vips": "8.18.7",
+    "png": "1.6.58",
+    "zlib": "2.3.3"
+  },
+  "files": [
+    {
+      "path": "commodore-64-1k.gltf",
+      "role": "gltf",
+      "bytes": 42100,
+      "sha256": "29ff955d041ae358ef20d1601e4abcad2ac4b4563d5110ff6e86ad4de460eee4"
+    },
+    {
+      "path": "ATTRIBUTION.txt",
+      "role": "attribution",
+      "bytes": 1133,
+      "sha256": "7a2fb56e8d33a7b19761973e7c4374d63492f6dd9d3f8204ba3417b16105e058"
+    },
+    {
+      "path": "images/image-00.png",
+      "role": "image",
+      "imageIndex": 0,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-00.jpg",
+        "bytes": 3876260,
+        "sha256": "0032568cea526cf5c2ee29df1fa5fc18c0c2f0b51d1344b436a7cb4cdc3b559b",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 1064549,
+      "sha256": "2b760df1ee4335904dfa6fb06a9a6e54ded281610be7fa5122eed908d498154a"
+    },
+    {
+      "path": "images/image-01.png",
+      "role": "image",
+      "imageIndex": 1,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-01.png",
+        "bytes": 6541505,
+        "sha256": "923dd6be258f66e231b0004bb72b03644e799399cd6cb5c5053dfa4b9f9397a8",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 684994,
+      "sha256": "7962817e9b86ca4b7fa7ba4c44918ed0ffb899e078a01065260a646ae3fbe763"
+    },
+    {
+      "path": "images/image-02.png",
+      "role": "image",
+      "imageIndex": 2,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-02.png",
+        "bytes": 5129179,
+        "sha256": "7bf738f906234c0c8d087fec83ed8485165668e4561920695837b192109c9cd5",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 396154,
+      "sha256": "344877dc30d72a8d456e2a15e0f8ccc8e216d1ae9c4fcd6da9fcfc8296934b0f"
+    },
+    {
+      "path": "images/image-03.png",
+      "role": "image",
+      "imageIndex": 3,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-03.jpg",
+        "bytes": 4281418,
+        "sha256": "4fcfbc3025abe64fb0010b62eb8f5e8f007bad6bd6af6afc944c394787641106",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 883871,
+      "sha256": "537e0fdd1be3ebe48dcb4e05b12df594ad0e8ea1491eb0e549cfa86752b4d121"
+    },
+    {
+      "path": "images/image-04.png",
+      "role": "image",
+      "imageIndex": 4,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-04.png",
+        "bytes": 7403004,
+        "sha256": "367d77f1ff80b75265e7f7d04a96b23f2016dbf234bf6d499cdfac937ba8f8ba",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 736391,
+      "sha256": "d08d09bca78002c018c4d6e69967e78a51979a198d7a61dad77ea10cfd3e6428"
+    },
+    {
+      "path": "images/image-05.png",
+      "role": "image",
+      "imageIndex": 5,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-05.png",
+        "bytes": 7469114,
+        "sha256": "48c3d6c8605ce4f7419bb057622ad8ebca38125cb11d067dc84de443e8b84694",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 269327,
+      "sha256": "01c3c134962fe2ad7aedde12cbf66bf0a569973f91ffb79352091e3489477f04"
+    },
+    {
+      "path": "images/image-06.png",
+      "role": "image",
+      "imageIndex": 6,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-06.jpg",
+        "bytes": 2820015,
+        "sha256": "dd4e9beb8a41009681cef84d117d4a355f4629e5f0762eebd03026256963ffb6",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 910356,
+      "sha256": "1fa534cc54ac43b13948d2186f3cf854ffca1e3351f028032927aeb3e33e2eea"
+    },
+    {
+      "path": "images/image-07.png",
+      "role": "image",
+      "imageIndex": 7,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-07.png",
+        "bytes": 4235767,
+        "sha256": "ee2f5eae7ca3ddddfaa690335a8df46f0568d29c40681a12668a145b678cb620",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 500652,
+      "sha256": "d9f02ccdb52110d6d692c6f2b0adf5adec4e7cb273d0e8d4555b78836cb9169d"
+    },
+    {
+      "path": "images/image-08.png",
+      "role": "image",
+      "imageIndex": 8,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-08.png",
+        "bytes": 3427824,
+        "sha256": "f53d4127a13809e5c338a74a42bb4ae21727ad2d30a595b586909d9694618dd6",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 374002,
+      "sha256": "d1acf4115b6635b9b86c3e4591f3ec2f39f82e0cf740375d00a0e69aa1e88159"
+    },
+    {
+      "path": "images/image-09.png",
+      "role": "image",
+      "imageIndex": 9,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-09.jpg",
+        "bytes": 2385464,
+        "sha256": "07a8cf8402c8077e05c21ee357d808ebef67b74d55ceda49dcaf5779b3c5fb58",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 713460,
+      "sha256": "8f020e9837f55cc293dc9048e62f1f3ff0026a3d87594dba3c2b560220a01167"
+    },
+    {
+      "path": "images/image-10.png",
+      "role": "image",
+      "imageIndex": 10,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-10.png",
+        "bytes": 4932047,
+        "sha256": "c171418a46204266c2f5b0b07b0f3827cb6f3c3ac7e4bcfb8bad733556e49ded",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 495788,
+      "sha256": "3042db8d39b2daa00b67c97c091e9a790a0e34f3363741514aada5f1a4c6257b"
+    },
+    {
+      "path": "images/image-11.png",
+      "role": "image",
+      "imageIndex": 11,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-11.png",
+        "bytes": 2676805,
+        "sha256": "d17ba13185fdce98506a17536b79af59c3e395ed1c28aad1b06e9708dbb3390d",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 240328,
+      "sha256": "8cc58508fc0f5044d69798335b3303ec820db74e81757ae059078cb3df184dab"
+    },
+    {
+      "path": "images/image-12.png",
+      "role": "image",
+      "imageIndex": 12,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-12.jpg",
+        "bytes": 137531,
+        "sha256": "cb686e7bc6726651fed753544bf1cebcb8b04bfb04a93e155f486dd00de201f6",
+        "dimensions": [
+          1024,
+          1024
+        ]
+      },
+      "bytes": 349931,
+      "sha256": "d4ab41e1eaa73fb49f3a862263e3e9fc3aaf9f888134fd172c834a94e3a436be"
+    },
+    {
+      "path": "images/image-13.png",
+      "role": "image",
+      "imageIndex": 13,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-13.png",
+        "bytes": 907203,
+        "sha256": "5f9b17a6b8912914c15eaf6db18bc8c16cbbe29b0c589ccc77bd6cdae65d7bd1",
+        "dimensions": [
+          1024,
+          1024
+        ]
+      },
+      "bytes": 936560,
+      "sha256": "89b768a6fcd6c712b32de33caae5f032c97722caebbd7ed3df898369cb63fecb"
+    },
+    {
+      "path": "images/image-14.png",
+      "role": "image",
+      "imageIndex": 14,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-14.png",
+        "bytes": 149185,
+        "sha256": "de56c98b7bc272e2be40b24edfeac51f096775b830c4c05511acbb2744919426",
+        "dimensions": [
+          1024,
+          1024
+        ]
+      },
+      "bytes": 140190,
+      "sha256": "acdb8768b1313272e962224d8d98bb3cf05c148152c143dcb5054ba014a69674"
+    },
+    {
+      "path": "images/image-15.png",
+      "role": "image",
+      "imageIndex": 15,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-15.jpg",
+        "bytes": 945859,
+        "sha256": "e5ab727d6bd544eb38976bf63f7c2e4ca095b0ded4ce56d3742228e282d677e9",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 141428,
+      "sha256": "331817daa901cb975de79cbf08075d071992efe73bd424f35f36df85ee1efde7"
+    },
+    {
+      "path": "images/image-16.png",
+      "role": "image",
+      "imageIndex": 16,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-16.png",
+        "bytes": 9035625,
+        "sha256": "f1ecc369b9c605ec9f852afa4bcf9a72251c3e67a6a34e68f5a3dbf13e655a1b",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 886989,
+      "sha256": "7b42c8294880e7c41bdd4eafd36033db195c4af53771fc0f61c22bb17f6250a8"
+    },
+    {
+      "path": "images/image-17.png",
+      "role": "image",
+      "imageIndex": 17,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-17.png",
+        "bytes": 3185055,
+        "sha256": "9b13730fea1c64583f0a3593e5fcfa6f9f68ab396ce9c8b143dc57f5b1d8ae11",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 350476,
+      "sha256": "ad3cc56e86898351b50181fef24d3a8c0f1167800c5ab830aef0d3ceaab4cc0f"
+    },
+    {
+      "path": "images/image-18.png",
+      "role": "image",
+      "imageIndex": 18,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-18.jpg",
+        "bytes": 3823654,
+        "sha256": "81f44e7294b02365c9e182efd9cfccca0f9ca29c48c5d025ca47a5a600fb2f85",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 1206138,
+      "sha256": "8e3b87827938ed66d8b57bb8132067e9523f173965030a250f0f08d97d7a0156"
+    },
+    {
+      "path": "images/image-19.png",
+      "role": "image",
+      "imageIndex": 19,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-19.png",
+        "bytes": 5987593,
+        "sha256": "c12a06169d9cc5f503226b085858d01874e18a46583dfee1cad05477401b455a",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 700873,
+      "sha256": "fc00eeb3302394709788aedf2aa2679dea4175b0ca1de18387990d7f6336181b"
+    },
+    {
+      "path": "images/image-20.png",
+      "role": "image",
+      "imageIndex": 20,
+      "textureRole": "normal",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-20.png",
+        "bytes": 3595264,
+        "sha256": "184ee273b1a42eac7405c11f164565547b4bc096357816ca25cc18bb4f7f4360",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 427919,
+      "sha256": "ca2119adbf9fed1eb5250a7936d0e49d6452c0b047753d6e11df60df80cf0770"
+    },
+    {
+      "path": "images/image-21.png",
+      "role": "image",
+      "imageIndex": 21,
+      "textureRole": "base-color",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-21.jpg",
+        "bytes": 1933055,
+        "sha256": "5a054ee4df4e5938e0d94bf49c1f1d1cbce88f8e5678cd7c6fdcc232df1f3070",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 382405,
+      "sha256": "0dc52a9d99f24b2df1aa1eaec07128f7a3e7509125909c254b302413b7b9904c"
+    },
+    {
+      "path": "images/image-22.png",
+      "role": "image",
+      "imageIndex": 22,
+      "textureRole": "metallic-roughness",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "source": {
+        "path": "../web/images/image-22.png",
+        "bytes": 5597446,
+        "sha256": "fb20d0f2ac562f3a0882178b9d62f95abd49f5a08494bb7c1ce8afa4e899e8ac",
+        "dimensions": [
+          4096,
+          4096
+        ]
+      },
+      "bytes": 508262,
+      "sha256": "40856a193a38fdd17ac76ce420d8b98effda080bd8fe19d58d7b3adbcd164f65"
+    }
+  ]
+}

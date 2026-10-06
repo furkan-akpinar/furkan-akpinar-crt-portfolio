@@ -21,12 +21,27 @@ import { sampleCurlProgress } from '@/lib/about-curl';
 import { createMenuSignalEffect } from './menu-signal-effect';
 import { heroPromptCount } from './hero-prompt-motion';
 import { createHeroTextWave } from './hero-text-wave';
+import { selectComputerTextureQuality } from './model-quality';
+import { createResourceScope } from './resource-scope';
 
 const smooth = (value: number) => { const t = THREE.MathUtils.clamp(value, 0, 1); return t * t * (3 - 2 * t); };
 
 /** One renderer, dependency-ordered FBOs, and one final CRT composite for scene + UI. */
 export function createScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number) {
+  const resources = createResourceScope();
+  try { return buildScenePipeline(renderer, width, height, resources); }
+  catch (error) { resources.dispose(); throw error; }
+}
+
+function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number, resources: ReturnType<typeof createResourceScope>) {
+  const own = resources.own;
   let w = width, h = height;
+  // Select before decoding any image, then retain the same model across rotations.
+  const textureQuality = selectComputerTextureQuality({
+    viewportWidth: width,
+    coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+    mobileUserAgent: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+  });
   const time = uniform(0);
   const travel = uniform(0);
   const paperColorEnabled = uniform(0);
@@ -47,35 +62,33 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
   const screenScale = uniform(new THREE.Vector2(1, 1));
   const scanAmount = uniform(1);
   const pixel = uniform(new THREE.Vector2(1 / width, 1 / height));
-  const heroTarget = new THREE.RenderTarget(width, height, { depthBuffer: true });
-  const projectsTarget = new THREE.RenderTarget(width, height, { depthBuffer: true });
-  const aboutTarget = new THREE.RenderTarget(width, height, { depthBuffer: true });
+  const heroTarget = own(new THREE.RenderTarget(width, height, { depthBuffer: true }));
+  const projectsTarget = own(new THREE.RenderTarget(width, height, { depthBuffer: true }));
+  const aboutTarget = own(new THREE.RenderTarget(width, height, { depthBuffer: true }));
   // The extra fullscreen pass runs only for the menu signal (and boot warmup).
-  const signalSource = new THREE.RenderTarget(width, height, { depthBuffer: false, type: THREE.HalfFloatType });
-  const menuSignal = createMenuSignalEffect(signalSource.texture,width,height,renderer.toneMapping);
-  const signalQuad = new THREE.QuadMesh(menuSignal.material);
+  const signalSource = own(new THREE.RenderTarget(width, height, { depthBuffer: false, type: THREE.HalfFloatType }));
+  const menuSignal = own(createMenuSignalEffect(signalSource.texture,width,height,renderer.toneMapping));
+  const signalQuad = own(new THREE.QuadMesh(menuSignal.material));
   const aperture = createProjectAperture();
-  const later = createLaterScenes(renderer, width, height);
-  const gallery = createProjectImages();
-  const heroReel=createHeroReel();
+  const later = own(createLaterScenes(renderer, width, height));
+  const gallery = own(createProjectImages(textureQuality === 'mobile' ? 1024 : 1536));
+  const heroReel=own(createHeroReel());
   const entryMediaIndices=[4,5,6,0];
   let assetsReady = false;
   let warmupStarted = false, warmupFinished = false;
   let assetError: unknown;
-  const mainUI = createCanvasUI(width, height);
-  const projectsUI = createCanvasUI(width, height);
-  const bootUI = createCanvasUI(width, height);
-  const navigationUI = createCanvasUI(width, height);
-  const aboutNavigationUI = createCanvasUI(width, height);
-  const projectTitle = createProjectTitle(width,height);
+  const mainUI = own(createCanvasUI(width, height));
+  const projectsUI = own(createCanvasUI(width, height));
+  const bootUI = own(createCanvasUI(width, height));
+  const navigationUI = own(createCanvasUI(width, height));
+  const aboutNavigationUI = own(createCanvasUI(width, height));
+  const projectTitle = own(createProjectTitle(width,height));
   const hero = new THREE.Scene();
   const projects = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(36, width / height, 0.01, 100);
   const projectCamera = new THREE.PerspectiveCamera(42, width / height, 0.1, 500);
   const uiCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 2);
   uiCamera.position.z = 1;
-  const owned: Array<{ dispose: () => void }> = [];
-  const own = <T extends { dispose: () => void }>(object: T): T => { owned.push(object); return object; };
   const plane = own(new THREE.PlaneGeometry(2, 2));
   const uiScene = (map: THREE.Texture) => {
     const scene = new THREE.Scene();
@@ -127,12 +140,13 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
   screenMaterial.clearcoatNode = glassResponse.mul(0.8274310931233314);
   screenMaterial.specularIntensityNode = glassResponse;
   screenMaterial.emissiveNode = mix(mix(preview.rgb.mul(1.12),texture(projectsTarget.texture, screenUV).rgb,screenBlend), texture(bootUI.texture, screenUV.flipY()).rgb, screenBoot).mul(scan);
-  const computer = createCommodoreComputer(screenMaterial);
+  const computer = own(createCommodoreComputer(screenMaterial, textureQuality));
   hero.add(computer.group);
-  const ground=createHeroGround(computer);hero.add(ground.group);
+  const ground=own(createHeroGround(computer));hero.add(ground.group);
   hero.add(new THREE.AmbientLight('#d1c6bf', 0.6));
   const key = new THREE.DirectionalLight('#ffe1bc', 1.9); key.position.set(-4, 5, 6); hero.add(key);
   key.castShadow=true; key.shadow.mapSize.set(1024,1024);
+  own(key.shadow);
   key.shadow.camera.left=-8;key.shadow.camera.right=8;key.shadow.camera.top=6;key.shadow.camera.bottom=-6;
   key.shadow.bias=-0.001;key.shadow.normalBias=0.03;key.shadow.radius=3;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -143,7 +157,7 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
   const rim = new THREE.DirectionalLight('#94a4db', 2); rim.position.set(5, 3, -3); hero.add(rim);
   const fill = new THREE.DirectionalLight('#dad8df', 0.9); fill.position.set(1, -1, 5); hero.add(fill);
 
-  const ring=createProjectRing(gallery.textures);
+  const ring=own(createProjectRing(gallery.textures));
   projects.add(ring.group);
 
   // All visual layers pass through this TSL shader, including type and boot graphics.
@@ -254,7 +268,7 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
     });
     return vec4(result,1);
   })();
-  const quad = new THREE.QuadMesh(composite);
+  const quad = own(new THREE.QuadMesh(composite));
   const worldCenter = new THREE.Vector3();
   const screenNormal = new THREE.Vector3();
   const screenRotation = new THREE.Quaternion();
@@ -269,9 +283,13 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
   let failed = false;
   let frames = 0;
   const entry:ProjectEntry={phase:0,camera:0,depth:0,turns:0,caption:0,offsetX:0,offsetY:0,visiblePanels:0};
-  const diagnostics = { frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics, motion:later.diagnostics.motion, ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
+  const diagnostics = { frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
 
+  let lastResize = '';
   function resize(nextWidth: number, nextHeight: number) {
+    const resizeKey = `${nextWidth}/${nextHeight}/${renderer.getPixelRatio()}`;
+    if (resizeKey === lastResize) return;
+    lastResize = resizeKey;
     w = nextWidth; h = nextHeight;
     // The same reference frame is almost cropped out in portrait viewports.
     projectFrameCurve.value=Math.pow(THREE.MathUtils.clamp((w/h-0.46)/1.14,0,1),1.4);
@@ -354,7 +372,7 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
     aboutCRT.value=paperCurl===undefined?0:runtime.reducedMotion?(paperCurl<0.5?1:0):1-smooth(paperCurl);
     aboutCRT.value*=1-bootMix.value;
     const activeSection=navigationSection(state.scene.id);
-    const darkHeader=state.scene.id==='about-us'||(state.scene.id==='office'&&state.localProgress>0.83);
+    const darkHeader=state.scene.id==='about-us';
     const heroHeader=state.scene.id==='hero';
     const navigationKey=`${w}/${h}/${activeSection}/${Math.round((paperCurl??0)*1000)}/${darkHeader}/${laterScene}/${heroHeader}/${runtime.menuOpen}/${runtime.hovered}`;
     if(navigationKey!==lastNavigationKey) {
@@ -433,7 +451,7 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
     const oldTarget = renderer.getRenderTarget();
     const oldAutoClear = renderer.autoClear;
     diagnostics.passes.length = 0;
-    paperColorEnabled.value = state.scene.id === 'about-us' || (state.scene.id === 'office' && state.localProgress > 0.55) ? 1 : 0;
+    paperColorEnabled.value = state.scene.id === 'about-us' ? 1 : 0;
     laterGrain.value=state.scene.id==='contact'?.35:state.scene.id==='about-us'?1-smooth((state.localProgress-.72)/.08)*.65:1;
     try {
       if(laterScene)gallery.update(ring.mediaIndices,true);
@@ -492,12 +510,10 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
     finally { renderer.setRenderTarget(oldTarget); renderer.autoClear=oldAutoClear; }
   }
   const copyMaterial = own(new THREE.MeshBasicNodeMaterial({ map: projectsTarget.texture }));
-  const screenCopy = new THREE.QuadMesh(copyMaterial);
+  const screenCopy = own(new THREE.QuadMesh(copyMaterial));
   return { render, resize, diagnostics, get isReady(){return assetsReady&&warmupFinished;},
     get paperActionBounds(){return diagnostics.scene === 'about-us' ? later.paperActionBounds : null;}, dispose() {
-    ground.dispose();computer.dispose(); heroReel.dispose();ring.dispose();projectTitle.dispose();key.shadow.dispose();heroTarget.dispose(); projectsTarget.dispose(); aboutTarget.dispose(); signalSource.dispose();menuSignal.dispose();signalQuad.dispose();later.dispose(); gallery.dispose();
-    mainUI.dispose(); projectsUI.dispose(); bootUI.dispose(); navigationUI.dispose();aboutNavigationUI.dispose();
-    owned.forEach(item=>item.dispose()); quad.dispose(); screenCopy.dispose();
+    resources.dispose();
     hero.clear(); projects.clear();
   }};
 }

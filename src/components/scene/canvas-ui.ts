@@ -7,7 +7,7 @@ import { curlCovers } from "./page-curl-geometry";
 import { projectCaptionLayout } from "./project-caption-layout";
 
 export interface UIOptions {
-  mode: "hero" | "projects" | "project-title" | "office" | "about-us" | "golden-tie-reveal" | "golden-tie" | "contact" | "boot" | "header";
+  mode: "hero" | "projects" | "project-title" | "contact" | "boot" | "header";
   /** Progress of the physical camera move into the computer's screen. */
   progress: number;
   bootProgress: number;
@@ -48,20 +48,27 @@ export function createCanvasUI(width: number, height: number) {
   texture.magFilter = LinearFilter;
   texture.generateMipmaps = false;
 
-  let logicalWidth = 1;
-  let logicalHeight = 1;
+  let logicalWidth = 0;
+  let logicalHeight = 0;
   let pixelRatio = 1;
   let disposed = false;
   let lastOptions: UIOptions | undefined;
-  const portrait = new Image();
-  portrait.onload = () => { if (lastOptions && !disposed) draw(lastOptions); };
-  portrait.src = portfolio.media.team;
+  let portrait: HTMLImageElement | undefined;
+  function loadPortrait() {
+    if (portrait) return;
+    portrait = new Image();
+    portrait.onload = () => { if (lastOptions && !disposed) draw(lastOptions); };
+    portrait.src = portfolio.media.team;
+  }
 
   function resize(nextWidth: number, nextHeight: number) {
     if (disposed) return;
-    logicalWidth = Math.max(1, nextWidth);
-    logicalHeight = Math.max(1, nextHeight);
-    pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const width = Math.max(1, nextWidth), height = Math.max(1, nextHeight);
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    if (logicalWidth === width && logicalHeight === height && pixelRatio === ratio) return;
+    logicalWidth = width;
+    logicalHeight = height;
+    pixelRatio = ratio;
     texture.dispose(); // Reallocate the GPU texture after a backing-store resize.
     canvas.width = Math.round(logicalWidth * pixelRatio);
     canvas.height = Math.round(logicalHeight * pixelRatio);
@@ -362,16 +369,6 @@ export function createCanvasUI(width: number, height: number) {
     if (line) ctx.fillText(line, x, y);
   }
 
-  function office(options: UIOptions, mobile: boolean, scale: number) {
-    const progress = clamp(options.sceneProgress ?? 0);
-    ctx.save();
-    ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    ctx.font = `${mobile ? 400 : 500} ${mobile ? logicalWidth * 0.197 : 144 * scale}px ${SERIF}`;
-    ctx.fillText(portfolio.about.title, logicalWidth / 2, (mobile ? 191 : 186 * scale) - Math.max(0, progress - 0.52) * logicalHeight * 1.6);
-    ctx.restore();
-  }
-
   function reveal(mobile: boolean, placement?: { titleBaseline: number; titleSize: number; subtitleSize: number }) {
     ctx.save();
     ctx.fillStyle = INK;
@@ -395,35 +392,8 @@ export function createCanvasUI(width: number, height: number) {
     ctx.restore();
   }
 
-  function goldenTie(options: UIOptions, mobile: boolean, scale: number) {
-    const progress = clamp(options.sceneProgress ?? 0);
-    const exit = clamp((progress - 0.58) / 0.31);
-    ctx.save();
-    const departure = clamp((progress - 0.65) / 0.15);
-    ctx.globalAlpha = 1 - departure * departure * (3 - 2 * departure);
-    ctx.translate(logicalWidth / 2, -exit * logicalHeight * 0.45);
-    const growth = 1 + exit * 0.65;
-    ctx.scale(growth, growth);
-    ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    ctx.font = `${mobile ? 400 : 500} ${mobile ? Math.min(48, logicalWidth * 0.1231) : 100 * scale}px ${SERIF}`;
-    ctx.letterSpacing = `${mobile ? 0.2 : 0.16 * scale}px`;
-    if (mobile) {
-      ctx.fillText("Check Out This", 0, 154);
-      ctx.fillText("Golden Tie", 0, 207);
-      ctx.letterSpacing = "0px";
-      ctx.font = `500 22px ${SERIF}`;
-      wrapped(portfolio.tie.description, 0, 247, logicalWidth * 0.74, 24);
-    } else {
-      ctx.fillText(portfolio.tie.title, 0, 209 * scale, logicalWidth * 0.91);
-      ctx.letterSpacing = "0px";
-      ctx.font = `500 ${35 * scale}px ${SERIF}`;
-      ctx.fillText(portfolio.tie.description, 0, 288 * scale);
-    }
-    ctx.restore();
-  }
-
   function contact(options: UIOptions) {
+    loadPortrait();
     const w = logicalWidth;
     const h = logicalHeight;
     const layout = contactLayout(w, h, options.sceneProgress);
@@ -460,7 +430,7 @@ export function createCanvasUI(width: number, height: number) {
     ctx.strokeRect(-boxWidth / 2, boxY, boxWidth, boxHeight);
     ctx.setLineDash([]);
     const pictureSize = mobile ? 107 : 160;
-    if (portrait.complete && portrait.naturalWidth) {
+    if (portrait?.complete && portrait.naturalWidth) {
       // A photographic crop of our generated fictional team, not Shader's CEO.
       const pictureHeight = mobile ? 112 : boxHeight - 24;
       ctx.drawImage(portrait, portrait.naturalWidth * 0.17, portrait.naturalHeight * 0.02, portrait.naturalWidth * 0.25, portrait.naturalHeight * 0.375, -boxWidth / 2 + 12, boxY + (boxHeight - pictureHeight) / 2, pictureSize, pictureHeight);
@@ -582,9 +552,6 @@ export function createCanvasUI(width: number, height: number) {
     } else {
       if (options.mode === "hero") hero(options, mobile, scale);
       if (options.mode === "projects" || options.mode === "project-title") projects(options, mobile, scale);
-      if (options.mode === "office") office(options, mobile, scale);
-      if (options.mode === "golden-tie-reveal") reveal(mobile);
-      if (options.mode === "golden-tie") goldenTie(options, mobile, scale);
       if (options.mode === "contact") contact(options);
       if (options.headerVisible !== false || options.mode === "header") header(options);
     }
@@ -594,8 +561,11 @@ export function createCanvasUI(width: number, height: number) {
   function dispose() {
     if (disposed) return;
     disposed = true;
-    portrait.onload = null;
-    portrait.src = "";
+    if (portrait) {
+      portrait.onload = null;
+      portrait.removeAttribute('src');
+      portrait = undefined;
+    }
     texture.dispose();
     canvas.width = 1;
     canvas.height = 1;

@@ -3,17 +3,25 @@ import { cos, sin, positionLocal, texture, uniform, uv, vec2, vec3, vec4 } from 
 import { createCanvasUI } from './canvas-ui';
 import type { SceneRuntime } from './runtime';
 import { portfolio } from '@/content/portfolio';
+import { createResourceScope } from './resource-scope';
 
 /** Two cached captions: typography is rasterized once per selection, motion is GPU-only. */
 export function createProjectTitle(width:number,height:number) {
+  const scope=createResourceScope();
+  try{return buildProjectTitle(width,height,scope);}
+  catch(error){scope.dispose();throw error;}
+}
+
+function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof createResourceScope>) {
+  const own=scope.own;
   const scene=new THREE.Scene();
-  const shape=new THREE.PlaneGeometry(2,2,12,8);
+  const shape=own(new THREE.PlaneGeometry(2,2,12,8));
   let w=width,h=height,key='';
   const slots=[0,1].map(()=>{
-    const ui=createCanvasUI(w,h);
+    const ui=own(createCanvasUI(w,h));
     const angle=uniform(0), opacity=uniform(0), lift=uniform(0), blur=uniform(0);
     const pixel=uniform(new THREE.Vector2(1/w,1/h));
-    const material=new THREE.MeshBasicNodeMaterial({transparent:true,depthTest:false,depthWrite:false});
+    const material=own(new THREE.MeshBasicNodeMaterial({transparent:true,depthTest:false,depthWrite:false}));
     const pivot=uniform(0.6);
     const relative=positionLocal.xy.sub(vec2(0,pivot));
     const depth=relative.y.mul(sin(angle)).mul(0.95).add(1);
@@ -67,5 +75,5 @@ export function createProjectTitle(width:number,height:number) {
   return {scene,update,resize(width:number,height:number){
     w=width;h=height;key='';
     slots.forEach(slot=>{slot.ui.resize(w,h);slot.pixel.value.set(1/w,1/h);slot.pivot.value=w<900?1-440/h:0.6;});
-  },dispose(){shape.dispose();for(const slot of slots){slot.ui.dispose();slot.material.dispose();}scene.clear();}};
+  },dispose(){scope.dispose();scene.clear();}};
 }

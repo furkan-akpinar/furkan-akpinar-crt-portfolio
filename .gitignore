@@ -25,10 +25,11 @@ DESIGN.md
 PRODUCT.md
 setup-windows.cmd
 skills-lock.json
-({*
+\(\{*
 /scripts/*
 !/scripts/prepare-computer.mjs
 !/scripts/package-static.mjs
+!/scripts/prepare-mobile-computer.mjs
 
 # Publish only assets used by the current portfolio; keep source archives locally.
 /public/*
@@ -57,6 +58,7 @@ skills-lock.json
 !/public/models/commodore64/
 /public/models/commodore64/*
 !/public/models/commodore64/web/
+!/public/models/commodore64/mobile/
 !/public/models/commodore64/ATTRIBUTION.txt
 !/public/textures/
 /public/textures/*

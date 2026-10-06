@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { GLTFLoader, type GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import { COMPUTER_MODEL_URLS, type ComputerTextureQuality } from './model-quality.ts';
 
-const MODEL_URL = '/models/commodore64/web/commodore-64-4k.gltf';
 const FLOOR_Y = -1.1725;
 const MONITOR_HEIGHT = 2.8;
 const SCREEN_FRONT_Z = 0.52;
@@ -36,7 +36,8 @@ export function shareEquivalentCommodoreOrmView(material: THREE.Material) {
 /**
  * This changes only which authored objects are decoded. The original 4K GLB
  * stays intact on disk. Unused peripherals and the old CRT picture do not
- * consume image/GPU memory; all selected casing/keyboard PBR maps retain 4K.
+ * consume image/GPU memory. The chosen desktop/mobile package supplies the
+ * same geometry and material maps at its registered texture resolution.
  */
 function selectComputerNodes(parser: GLTFParser) {
   const json = parser.json;
@@ -146,7 +147,8 @@ export function arrangeCommodoreComputer(source: THREE.Group, screenMaterial: TH
   return { keyboard, monitor, screen, screenMesh, screenSize, groundLayout, scale };
 }
 
-export function createCommodoreComputer(screenMaterial: THREE.Material) {
+export function createCommodoreComputer(screenMaterial: THREE.Material, textureQuality: ComputerTextureQuality = 'desktop') {
+  const modelUrl = COMPUTER_MODEL_URLS[textureQuality];
   const group = new THREE.Group();
   group.name = 'commodore-64-and-1702-licensed-model';
   group.userData.assetStatus = 'licensed-sketchfab-commodore64';
@@ -156,7 +158,7 @@ export function createCommodoreComputer(screenMaterial: THREE.Material) {
   const screenSize = new THREE.Vector2(1.95, 1.42);
   const groundLayout: ComputerGroundLayout = { floorY: FLOOR_Y, contacts: [] };
   const diagnostics = {
-    loaded: false, error: null as string | null, source: MODEL_URL,
+    loaded: false, error: null as string | null, source: modelUrl, textureQuality,
     scale: 0, screenSize: [0, 0], screenCenter: [0, 0, 0],
     meshes: 0, triangles: 0, sharedOrmViews: 0, materials: [] as string[],
     textures: [] as { name: string; width: number; height: number; channel: number }[],
@@ -231,11 +233,11 @@ export function createCommodoreComputer(screenMaterial: THREE.Material) {
   });
   const ready = (async () => {
     try {
-      const response = await fetch(MODEL_URL, { signal: controller.signal });
+      const response = await fetch(modelUrl, { signal: controller.signal });
       if (!response.ok) throw new Error(`Commodore model request failed: HTTP ${response.status}`);
       const binary = await response.arrayBuffer();
       if (disposed) return;
-      const gltf = await loader.parseAsync(binary, MODEL_URL.slice(0, MODEL_URL.lastIndexOf('/') + 1));
+      const gltf = await loader.parseAsync(binary, modelUrl.slice(0, modelUrl.lastIndexOf('/') + 1));
       if (disposed) { releaseOwned(); return; }
       for (const material of materials) if (shareEquivalentCommodoreOrmView(material)) diagnostics.sharedOrmViews++;
       const model = arrangeCommodoreComputer(gltf.scene, screenMaterial);

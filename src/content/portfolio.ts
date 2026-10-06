@@ -19,10 +19,7 @@ export const portfolio = {
     callLabel: 'İletişime geç',
     nav: navigation,
   },
-  reference: 'https://www.shader.se/',
   github: 'https://github.com/furkan-akpinar',
-  callLabel: 'İletişime geç',
-  nav: navigation,
   projectsIntro: 'Arayüz, etkileşim ve web tasarımı çalışmalarım. Her projenin kaynak koduna ve canlı sitesine buradan ulaşabilirsin.',
   projects: [
     { title: 'KARAKTER STÜDYO', href: 'https://karakter-studyo.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/karakter-studyo', image: '/images/projects/posters/01-karakter-studyo.png', cropRight: 0, color: '#141414' },
@@ -35,12 +32,9 @@ export const portfolio = {
   ],
   media: {
     team: '/images/about-team.png',
-    hardware: '/images/about-hardware.png',
     people: '/images/people-atlas.png',
-    handshake: '/images/handshake.png',
   },
   about: {
-    title: 'Hakkımda',
     headline: ['Merhaba, ben', 'Furkan Akpınar.'],
     headlineMobile: ['Merhaba, ben', 'Furkan Akpınar.'],
     paragraphs: [
@@ -61,14 +55,7 @@ export const portfolio = {
     lines: ['İyi bir arayüz,', 'detaylarda başlar.'],
     description: 'Tasarımı, hareketi ve kodu aynı özenle ele alıyorum.',
   },
-  tie: {
-    title: 'Altın kravat',
-    description: 'Bir sonraki adıma geçelim.',
-  },
   contact: {
-    hello: '“Merhaba”',
-    title: 'Konuşalım.',
-    description: 'Bir arayüz fikrin, bir sorunun ya da paylaşmak istediğin bir detay varsa, tanışmak isterim.',
     columns: [
       { title: 'İletişim', lines: ['GitHub üzerinden', 'furkan-akpinar'] },
       { title: 'Konum', lines: ['İstanbul, Türkiye', 'Freelance'] },
@@ -78,11 +65,9 @@ export const portfolio = {
     businessDescription: 'Tasarım, etkileşim ve arayüz geliştirme üzerine konuşabiliriz.',
     footerTagline: 'Frontend Geliştirici ve Web Tasarımcısı',
     footerNotice: 'Furkan Akpınar · İstanbul',
-    accessibility: ['KLAVYE VE', 'AZALTILMIŞ HAREKET', 'DESTEĞİ'],
   },
   boot: {
     version: 'Portföy yükleniyor…',
     notice: 'Furkan Akpınar STUDIO, 2026. Tüm Hakları Saklıdır.',
   },
-  studyNote: 'Shader’dan ilham alan kişisel portföy. Projeler bölümünde kendi web çalışmalarım yer alır.',
 } as const;

@@ -6,7 +6,7 @@
   "description": "Furkan Akpınar's interactive portfolio with WebGPU, a cinematic CRT interface and a continuous 3D project film.",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "node scripts/prepare-computer.mjs && next build && node scripts/package-static.mjs",
+    "build": "node scripts/prepare-computer.mjs && node scripts/prepare-mobile-computer.mjs --verify && next build && node scripts/package-static.mjs",
     "start": "wrangler dev --port 3256",
     "preview": "wrangler dev --port 3256",
     "deploy": "npm run build && wrangler deploy",
@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@gsap/react": "2.1.2",
-    "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.1",
     "gsap": "3.15.0",
     "lenis": "1.3.26",

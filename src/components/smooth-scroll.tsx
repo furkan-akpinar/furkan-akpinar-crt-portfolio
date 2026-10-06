@@ -9,18 +9,24 @@ import { projectAboutWheelSteps } from './scene/project-about-transition';
 import { MENU_SIGNAL_DURATION, monitorMenuTransition, type MenuNavigationRequest } from './scene/menu-navigation';
 import { sceneScrollTop, storyProgress, SCROLL_SCREENS } from './scene/runtime';
 import { getSceneState, type SceneId } from '@/config/scenes';
+import { resizeScrollTarget } from './scene/viewport-resize';
 
 gsap.registerPlugin(ScrollTrigger);
 export function SmoothScroll({runtime,reducedMotion}:{runtime:RefObject<SceneRuntime>;reducedMotion:boolean}) {
   useEffect(()=>{
     let gesture=createIntroGestureState();
     let lenis:Lenis|null=null;
-    let viewportHeight=window.innerHeight;
+    let viewport={width:window.innerWidth,height:window.innerHeight};
+    let disposed=false;
+    let resizeTimer:ReturnType<typeof setTimeout>|undefined;
     let signalTimeline:gsap.core.Timeline|null=null;
     let pending:MenuNavigationRequest|null=null;
     let committed=false;
     let monitorTarget:SceneId|null=null;
     const arbitrate=(deltaX:number,deltaY:number,event:Event)=>{
+      // Lenis also reports taps with zero deltas. Cancelling them suppresses
+      // the native click, including section selection in the open mobile menu.
+      if(deltaX===0&&deltaY===0)return true;
       // false bypasses Lenis without cancelling the browser's modifier gesture.
       if(event instanceof WheelEvent&&(event.ctrlKey||event.metaKey))return false;
       if(runtime.current.menuSignalActive||monitorTarget!==null){event.preventDefault();return false;}
@@ -124,21 +130,31 @@ export function SmoothScroll({runtime,reducedMotion}:{runtime:RefObject<SceneRun
     window.addEventListener('keydown',blockKey);
     window.addEventListener('touchmove',blockTouch,{passive:false});
     document.addEventListener('visibilitychange',visibility);
-    const resize=()=>{
-      monitorTarget=null;
-      const position=window.scrollY/Math.max(1,viewportHeight);
-      viewportHeight=window.innerHeight;gesture=createIntroGestureState();
+    const refresh=()=>{
+      if(disposed)return;
+      const next={width:window.innerWidth,height:window.innerHeight};
+      const top=resizeScrollTarget(window.scrollY,viewport,next);
+      if(next.width!==viewport.width||next.height!==viewport.height)gesture=createIntroGestureState();
+      viewport=next;
       lenis?.resize();
-      if(lenis)lenis.scrollTo(position*viewportHeight,{immediate:true,force:true});
+      if(top!==null){
+        monitorTarget=null;
+        if(lenis)lenis.scrollTo(top,{immediate:true,force:true});
+        else window.scrollTo({top,behavior:'instant'});
+      }
       ScrollTrigger.refresh();
+      syncProgress();
+    };
+    const resize=()=>{
+      clearTimeout(resizeTimer);
+      resizeTimer=setTimeout(refresh,150);
     };
     window.addEventListener('resize',resize);
-    const refresh=()=>{lenis?.resize();ScrollTrigger.refresh();syncProgress();};
-    window.addEventListener('study-layout-change',refresh);
+    window.addEventListener('study-layout-change',resize);
     document.fonts.ready.then(refresh);
     // The trigger's initial refresh supplies restored scroll progress as well.
     trigger.refresh();
-    return()=>{completeSignal();signalTimeline?.kill();trigger.kill();gsap.ticker.remove(update);lenis?.off('scroll',ScrollTrigger.update);lenis?.destroy();window.removeEventListener('wheel',nativeWheel);window.removeEventListener('study-navigate',navigate);window.removeEventListener('study-navigation-cancel',completeSignal);window.removeEventListener('keydown',blockKey);window.removeEventListener('touchmove',blockTouch);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('resize',resize);window.removeEventListener('study-layout-change',refresh);};
+    return()=>{disposed=true;clearTimeout(resizeTimer);completeSignal();signalTimeline?.kill();trigger.kill();gsap.ticker.remove(update);lenis?.off('scroll',ScrollTrigger.update);lenis?.destroy();window.removeEventListener('wheel',nativeWheel);window.removeEventListener('study-navigate',navigate);window.removeEventListener('study-navigation-cancel',completeSignal);window.removeEventListener('keydown',blockKey);window.removeEventListener('touchmove',blockTouch);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('resize',resize);window.removeEventListener('study-layout-change',resize);};
   },[reducedMotion,runtime]);
   return null;
 }

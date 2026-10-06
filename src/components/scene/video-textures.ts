@@ -1,21 +1,13 @@
 import * as THREE from 'three/webgpu';
 
-export const PROJECT_RECORDING_URLS = Array.from(
-  { length: 11 },
-  // Alamance follows the recorded curved image boundary; the old planar crop
-  // removed its logo and footer. Keep the previous clip and provenance intact.
-  (_, index) => `/media/project-reference04/project-${String(index).padStart(2, '0')}${index === 3 ? '-round06' : ''}.mp4`,
-);
-
 const LOAD_TIMEOUT = 30_000;
 
 /**
- * Locally extracted, rectified crops of the user-supplied reference recording.
- * Playback owns its own media clock; it never changes the film's carousel position.
- * Every rear thumbnail is decoded before ready resolves, even while paused.
+ * Video textures with a shared loading contract and explicit playback ownership.
+ * Each video decodes its first frame before ready resolves, even while paused.
  */
-export function createProjectRecordings(sources: readonly string[] = PROJECT_RECORDING_URLS) {
-  if (sources.length === 0) throw new Error('Project recordings require at least one local clip.');
+export function createVideoTextures(sources: readonly string[]) {
+  if (sources.length === 0) throw new Error('Video textures require at least one clip.');
   const videos: HTMLVideoElement[] = [];
   const textures: THREE.VideoTexture[] = [];
   const wanted = new Uint8Array(sources.length);
@@ -25,7 +17,7 @@ export function createProjectRecordings(sources: readonly string[] = PROJECT_REC
   const playAttempt = new Uint32Array(sources.length);
   const listeners: Array<{ data: () => void; error: () => void }> = [];
   const diagnostics = {
-    source: 'user-recording-crops',
+    source: 'video-textures',
     readyCount: 0,
     total: sources.length,
     playing: [] as number[],
@@ -100,7 +92,7 @@ export function createProjectRecordings(sources: readonly string[] = PROJECT_REC
         return;
       }
       playback[index] = 0;
-      fail(new Error(`Project recording playback failed: ${sources[index]}`, { cause: reason }));
+      fail(new Error(`Video playback failed: ${sources[index]}`, { cause: reason }));
     });
   }
 
@@ -115,7 +107,7 @@ export function createProjectRecordings(sources: readonly string[] = PROJECT_REC
 
   const timeout = setTimeout(() => {
     const missing = sources.filter((_, index) => !loaded[index]);
-    fail(new Error(`Timed out decoding initial project recording frames: ${missing.join(', ')}`));
+    fail(new Error(`Timed out decoding initial video frames: ${missing.join(', ')}`));
   }, LOAD_TIMEOUT);
 
   for (let index = 0; index < sources.length; index++) {
@@ -129,7 +121,7 @@ export function createProjectRecordings(sources: readonly string[] = PROJECT_REC
     video.disablePictureInPicture = true;
     video.setAttribute('playsinline', '');
     const map = new THREE.VideoTexture(video);
-    map.name = `user-recording-project-${index}`;
+    map.name = `video-texture-${index}`;
     map.colorSpace = THREE.SRGBColorSpace;
     map.minFilter = map.magFilter = THREE.LinearFilter;
     map.generateMipmaps = false;
@@ -149,7 +141,7 @@ export function createProjectRecordings(sources: readonly string[] = PROJECT_REC
       if (wanted[index]) start(index);
     };
     const error = () => fail(new Error(
-      `Cannot decode project recording ${sources[index]} (media error ${video.error?.code ?? 'unknown'}).`,
+      `Cannot decode video ${sources[index]} (media error ${video.error?.code ?? 'unknown'}).`,
     ));
     listeners.push({ data, error });
     video.addEventListener('loadeddata', data);

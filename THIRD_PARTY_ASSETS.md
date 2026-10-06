@@ -10,6 +10,7 @@ Bu dosya, portföyün uygulama kodundan ayrı olarak model, yazı tipi ve medya 
 - **Uyarlamalar:** Monitör ve klavyenin seçimi, sahne ölçeği/yerleşimi, ekran UV ve video malzemesi, aydınlatma ve materyal tepkisi.
 - **Yayın paketi:** GLB içindeki geometri ve görüntü baytları değiştirilmeden dış `.gltf`, `.bin`, PNG/JPEG dosyalarına ayrıldı. 4K dokular yeniden kodlanmadı veya küçültülmedi. Kaynak/çıktı hash'leri `public/models/commodore64/web/conversion-manifest.json` içindedir.
 - Ayrıntılı bildirim: [ATTRIBUTION.txt](public/models/commodore64/ATTRIBUTION.txt).
+- **Mobil uyarlama:** Aynı geometri, UV ve malzemelerle 1024px PNG dokular kullanılır. Renk dokuları lineer ışıkta, normal/ORM haritaları sayısal kanalları korunarak küçültüldü. Mobil kaynak/çıktı kayıtları `public/models/commodore64/mobile/conversion-manifest.json` ve aynı klasördeki `ATTRIBUTION.txt` içindedir; özgün 4K paket korunur.
 
 ## Yazı tipleri
 
