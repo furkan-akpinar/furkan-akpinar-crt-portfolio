@@ -1,0 +1,31 @@
+Commodore 64 || Computer (Full Pack)
+Creator: dark_igorek
+Creator page: https://sketchfab.com/dark_igorek
+Source: https://sketchfab.com/3d-models/commodore-64-computer-full-pack-1f43612fa2d54041bbe2bdff8164c2cd
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License link: https://creativecommons.org/licenses/by/4.0/
+
+Official 4K GLB downloaded from Sketchfab on 2026-10-04.
+Original file: commodore-64-4k.glb
+Size: 99,660,648 bytes
+SHA-256: 4FCBFD31272C1E8DA6E3148FB79863638781396C7F0C93A21089E427689BD27F
+The downloaded GLB is preserved unchanged in the local source archive. Its
+embedded asset.extras metadata identifies the title, author, source URL and
+CC-BY-4.0 license above.
+
+Published model: web/commodore-64-4k.gltf
+Hosting conversion: scripts/prepare-computer.mjs extracts the original geometry
+and all 23 embedded JPEG/PNG files byte for byte. No image is resized or
+recompressed, and no vertices, normals, UVs, material maps or authored node
+transforms are changed. The glTF JSON uses relative external storage URIs.
+web/conversion-manifest.json records source and output sizes, SHA-256 hashes,
+and the original buffer layout so the package can be verified independently.
+
+Site adaptation: monitor and keyboard selected from the full pack, uniformly
+normalized and repositioned; screen UVs and video material adapted for the
+showreel and monitor transition; lighting and material response adapted for
+the hero scene. These adaptations occur at runtime.
+
+No endorsement by the creator is implied.
+
+Public attribution: /model-credits.html

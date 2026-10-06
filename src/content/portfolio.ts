@@ -1,0 +1,88 @@
+/** Personal portfolio copy and user-supplied project artwork, in display order. */
+const navigation = [
+  { label: 'Ana Sayfa', target: 'hero' },
+  { label: 'Projeler', target: 'projects' },
+  { label: 'Hakkımda', target: 'about-us' },
+  { label: 'İletişim', target: 'contact' },
+] as const;
+
+export const portfolio = {
+  name: 'Furkan Akpınar',
+  title: 'Fikirleri etkileşimli web deneyimlerine dönüştürüyorum.',
+  heroLinesDesktop: ['Fikirleri', 'etkileşimli web', 'deneyimlerine', 'dönüştürüyorum.'],
+  heroLinesMobile: ['Fikirleri', 'etkileşimli web', 'deneyimlerine', 'dönüştürüyorum.'],
+  prompt: 'Çalışmalarımı keşfet',
+  home: {
+    name: 'Furkan Akpınar',
+    role: 'Frontend Geliştirici',
+    description: 'Ben Furkan. Tasarımı, kodu ve hareketi bir araya getirerek web arayüzleri geliştiriyorum.',
+    callLabel: 'İletişime geç',
+    nav: navigation,
+  },
+  reference: 'https://www.shader.se/',
+  github: 'https://github.com/furkan-akpinar',
+  callLabel: 'İletişime geç',
+  nav: navigation,
+  projectsIntro: 'Arayüz, etkileşim ve web tasarımı çalışmalarım. Her projenin kaynak koduna ve canlı sitesine buradan ulaşabilirsin.',
+  projects: [
+    { title: 'KARAKTER STÜDYO', href: 'https://karakter-studyo.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/karakter-studyo', image: '/images/projects/posters/01-karakter-studyo.png', cropRight: 0, color: '#141414' },
+    { title: 'KIPIR', href: 'https://kipir-studio.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/kipir-studio', image: '/images/projects/posters/02-kipir.png', cropRight: 0, color: '#ff4e33' },
+    { title: 'Snow Medya', href: 'https://snow-medya.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/snow-medya', image: '/images/projects/posters/03-snow-medya.png', cropRight: 0, color: '#141b17' },
+    { title: 'Ezo Eylül Sağır', href: 'https://furkan-akpinar.github.io/ezo-eylul-sagir-interactive/', repository: 'https://github.com/furkan-akpinar/ezo-eylul-sagir-interactive', image: '/images/projects/posters/04-ezo-eylul-sagir.png', cropRight: 0, color: '#3a3227' },
+    { title: 'VANTA DRIVE', href: 'https://vanta-drive.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/vanta-drive', image: '/images/projects/posters/05-vanta-drive.png', cropRight: 0, color: '#0c121c' },
+    { title: 'KOME', href: 'https://kome-japanese-culture.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar', image: '/images/projects/posters/06-kome.png', cropRight: 0, color: '#ffd600' },
+    { title: 'Furkan Akpınar · Dijital Ajans', href: 'https://furkan-akpinar-dijital-ajans.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/furkan-akpinar-dijital-ajans', image: '/images/projects/posters/07-dijital-ajans.png', cropRight: 0, color: '#101815' },
+  ],
+  media: {
+    team: '/images/about-team.png',
+    hardware: '/images/about-hardware.png',
+    people: '/images/people-atlas.png',
+    handshake: '/images/handshake.png',
+  },
+  about: {
+    title: 'Hakkımda',
+    headline: ['Merhaba, ben', 'Furkan Akpınar.'],
+    headlineMobile: ['Merhaba, ben', 'Furkan Akpınar.'],
+    paragraphs: [
+      'İstanbul’da yaşayan, freelance çalışan bir frontend geliştiricisi ve web tasarımcısıyım. Bir arayüze başlarken yalnızca nasıl görüneceğini değil, onu kullanacak kişinin neye ihtiyaç duyduğunu da düşünüyorum. Tipografi, boşluklar ve görsel hiyerarşiyle içeriği anlaşılır kılmayı; farklı ekranlarda rahatça kullanılabilen, kendine ait bir karakteri olan sayfalar oluşturmayı önemsiyorum.',
+      'Tasarım ve geliştirmeyi birbirini tamamlayan iki parça olarak ele alıyorum. Bir düğmenin verdiği geri bildirim, menünün açılma biçimi ya da sayfalar arasındaki hareket, deneyimin bütünüyle uyumlu olmalı. Bu yüzden etkileşimleri yalnızca dikkat çekmek için eklemiyorum; kullanıcının bulunduğu yeri anlamasını ve bir sonraki adımı rahatça bulmasını amaçlıyorum.',
+      'HTML, CSS ve JavaScript temeli üzerinde TypeScript, React, Next.js ve Astro ile arayüzler geliştiriyorum. Kodun anlaşılır kalmasına, bileşenlerin düzenine ve tasarımın farklı ekranlara uyumuna özen gösteriyorum. Git, GitHub ve VS Code çalışma akışımın parçası; Vercel ise hazırladığım arayüzleri web üzerinde paylaşırken kullandığım araçlardan biri. Yeni şeyler öğrenerek bu çalışma biçimini geliştirmeye devam ediyorum.',
+    ],
+    technologiesTitle: ['Fikirden', 'arayüze.'],
+    technologiesDescription: 'Kullandığım diller, arayüz araçları ve günlük çalışma akışım.',
+    technologies: ['HTML', 'CSS', 'JavaScript', 'TypeScript', 'React', 'Next.js', 'Astro'],
+    toolsLabel: 'Çalışma araçlarım',
+    tools: ['Git', 'GitHub', 'VS Code', 'Vercel'],
+    closingHeadline: ['Küçük detaylar.', 'Bütün bir deneyim.'],
+    closingHeadlineMobile: ['Küçük detaylar.', 'Bütün bir deneyim.'],
+    closingParagraph: 'Benim için iyi bir web deneyimi, ilk bakışta ilgi çekip sonrasında rahatça kullanılabilen bir bütün. Küçük kararların toplamına dikkat ediyorum: okunaklı bir satır, doğru yerde bir boşluk ve yerinde bir hareket. Her yeni fikirde tasarımı ve kodu aynı özenle düşünmek istiyorum.',
+  },
+  reveal: {
+    lines: ['İyi bir arayüz,', 'detaylarda başlar.'],
+    description: 'Tasarımı, hareketi ve kodu aynı özenle ele alıyorum.',
+  },
+  tie: {
+    title: 'Altın kravat',
+    description: 'Bir sonraki adıma geçelim.',
+  },
+  contact: {
+    hello: '“Merhaba”',
+    title: 'Konuşalım.',
+    description: 'Bir arayüz fikrin, bir sorunun ya da paylaşmak istediğin bir detay varsa, tanışmak isterim.',
+    columns: [
+      { title: 'İletişim', lines: ['GitHub üzerinden', 'furkan-akpinar'] },
+      { title: 'Konum', lines: ['İstanbul, Türkiye', 'Freelance'] },
+      { title: 'Odak', lines: ['Frontend geliştirme', 'Web tasarımı'] },
+    ],
+    businessTitle: 'Bir fikirle başlayalım.',
+    businessDescription: 'Tasarım, etkileşim ve arayüz geliştirme üzerine konuşabiliriz.',
+    footerTagline: 'Frontend Geliştirici ve Web Tasarımcısı',
+    footerNotice: 'Furkan Akpınar · İstanbul',
+    accessibility: ['KLAVYE VE', 'AZALTILMIŞ HAREKET', 'DESTEĞİ'],
+  },
+  boot: {
+    version: 'Portföy yükleniyor…',
+    notice: 'Furkan Akpınar STUDIO, 2026. Tüm Hakları Saklıdır.',
+  },
+  studyNote: 'Shader’dan ilham alan kişisel portföy. Projeler bölümünde kendi web çalışmalarım yer alır.',
+} as const;

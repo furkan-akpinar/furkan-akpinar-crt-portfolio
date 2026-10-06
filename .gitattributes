@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.mp4 -text
+*.bin -text
+*.ttf -text
+public/models/** linguist-vendored
+public/fonts/** linguist-vendored

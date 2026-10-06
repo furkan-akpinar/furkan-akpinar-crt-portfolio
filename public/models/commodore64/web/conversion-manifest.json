@@ -1,0 +1,607 @@
+{
+  "version": 1,
+  "source": {
+    "file": "commodore-64-4k.glb",
+    "bytes": 99660648,
+    "sha256": "4fcbfd31272c1e8da6e3148fb79863638781396c7f0c93a21089e427689bd27f",
+    "jsonChunkBytes": 25632,
+    "jsonSemanticSha256": "e8d8d5bbc8dcba0dc3bc68870c66154243b080a847ac741163772794b2148d87",
+    "binChunkBytes": 99634988,
+    "binSha256": "7705ac7b37b9a5886c7b05efccddbca128eea8a9291b9b8ba1a78ee1eb93b9b9"
+  },
+  "conversion": {
+    "method": "Byte-identical extraction of the four geometry bufferViews and all 23 embedded JPEG/PNG payloads. Only glTF storage URIs and buffer layout change.",
+    "geometryViewCount": 4,
+    "imageCount": 23,
+    "recompressed": false,
+    "resized": false,
+    "geometryModified": false,
+    "perFileLimitBytes": 26214400
+  },
+  "originalLayout": {
+    "buffers": [
+      {
+        "byteLength": 99634988
+      }
+    ],
+    "bufferViews": [
+      {
+        "buffer": 0,
+        "byteLength": 1588452,
+        "name": "floatBufferViews",
+        "target": 34963
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3320080,
+        "byteOffset": 1588452,
+        "byteStride": 8,
+        "name": "floatBufferViews",
+        "target": 34962
+      },
+      {
+        "buffer": 0,
+        "byteLength": 2628456,
+        "byteOffset": 4908532,
+        "byteStride": 12,
+        "name": "floatBufferViews",
+        "target": 34962
+      },
+      {
+        "buffer": 0,
+        "byteLength": 1622128,
+        "byteOffset": 7536988,
+        "byteStride": 16,
+        "name": "floatBufferViews",
+        "target": 34962
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3876260,
+        "byteOffset": 9159116,
+        "name": "computer_details_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 6541505,
+        "byteOffset": 13035376,
+        "name": "computer_details_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 5129179,
+        "byteOffset": 19576881,
+        "name": "computer_details_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 4281418,
+        "byteOffset": 24706060,
+        "name": "computer_keyboard_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 7403004,
+        "byteOffset": 28987478,
+        "name": "computer_keyboard_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 7469114,
+        "byteOffset": 36390482,
+        "name": "computer_keyboard_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 2820015,
+        "byteOffset": 43859596,
+        "name": "computer_main_body_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 4235767,
+        "byteOffset": 46679611,
+        "name": "computer_main_body_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3427824,
+        "byteOffset": 50915378,
+        "name": "computer_main_body_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 2385464,
+        "byteOffset": 54343202,
+        "name": "peripherals_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 4932047,
+        "byteOffset": 56728666,
+        "name": "peripherals_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 2676805,
+        "byteOffset": 61660713,
+        "name": "peripherals_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 137531,
+        "byteOffset": 64337518,
+        "name": "connector_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 907203,
+        "byteOffset": 64475049,
+        "name": "connector_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 149185,
+        "byteOffset": 65382252,
+        "name": "connector_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 945859,
+        "byteOffset": 65531437,
+        "name": "monitor_black_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 9035625,
+        "byteOffset": 66477296,
+        "name": "monitor_black_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3185055,
+        "byteOffset": 75512921,
+        "name": "monitor_black_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3823654,
+        "byteOffset": 78697976,
+        "name": "monitor_white_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 5987593,
+        "byteOffset": 82521630,
+        "name": "monitor_white_metallicRoughness.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 3595264,
+        "byteOffset": 88509223,
+        "name": "monitor_white_normal.png"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 1933055,
+        "byteOffset": 92104487,
+        "name": "monitor_screen_baseColor.jpeg"
+      },
+      {
+        "buffer": 0,
+        "byteLength": 5597446,
+        "byteOffset": 94037542,
+        "name": "monitor_screen_metallicRoughness.png"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "commodore-64-4k.gltf",
+      "role": "gltf",
+      "bytes": 42101,
+      "sha256": "294decb77206c090638b78c55c66198a776e5894e9d2f36505097ea14193d486"
+    },
+    {
+      "path": "geometry.bin",
+      "role": "geometry",
+      "sourceRange": {
+        "byteOffset": 0,
+        "byteLength": 9159116
+      },
+      "bytes": 9159116,
+      "sha256": "777c5424f006ca3e5e580c83454d17c6d33eccba31d0c9dcb2d5c59e2b56c4a5"
+    },
+    {
+      "path": "images/image-00.jpg",
+      "role": "image",
+      "imageIndex": 0,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 4,
+        "byteOffset": 9159116,
+        "byteLength": 3876260
+      },
+      "bytes": 3876260,
+      "sha256": "0032568cea526cf5c2ee29df1fa5fc18c0c2f0b51d1344b436a7cb4cdc3b559b"
+    },
+    {
+      "path": "images/image-01.png",
+      "role": "image",
+      "imageIndex": 1,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 5,
+        "byteOffset": 13035376,
+        "byteLength": 6541505
+      },
+      "bytes": 6541505,
+      "sha256": "923dd6be258f66e231b0004bb72b03644e799399cd6cb5c5053dfa4b9f9397a8"
+    },
+    {
+      "path": "images/image-02.png",
+      "role": "image",
+      "imageIndex": 2,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 6,
+        "byteOffset": 19576881,
+        "byteLength": 5129179
+      },
+      "bytes": 5129179,
+      "sha256": "7bf738f906234c0c8d087fec83ed8485165668e4561920695837b192109c9cd5"
+    },
+    {
+      "path": "images/image-03.jpg",
+      "role": "image",
+      "imageIndex": 3,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 7,
+        "byteOffset": 24706060,
+        "byteLength": 4281418
+      },
+      "bytes": 4281418,
+      "sha256": "4fcfbc3025abe64fb0010b62eb8f5e8f007bad6bd6af6afc944c394787641106"
+    },
+    {
+      "path": "images/image-04.png",
+      "role": "image",
+      "imageIndex": 4,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 8,
+        "byteOffset": 28987478,
+        "byteLength": 7403004
+      },
+      "bytes": 7403004,
+      "sha256": "367d77f1ff80b75265e7f7d04a96b23f2016dbf234bf6d499cdfac937ba8f8ba"
+    },
+    {
+      "path": "images/image-05.png",
+      "role": "image",
+      "imageIndex": 5,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 9,
+        "byteOffset": 36390482,
+        "byteLength": 7469114
+      },
+      "bytes": 7469114,
+      "sha256": "48c3d6c8605ce4f7419bb057622ad8ebca38125cb11d067dc84de443e8b84694"
+    },
+    {
+      "path": "images/image-06.jpg",
+      "role": "image",
+      "imageIndex": 6,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 10,
+        "byteOffset": 43859596,
+        "byteLength": 2820015
+      },
+      "bytes": 2820015,
+      "sha256": "dd4e9beb8a41009681cef84d117d4a355f4629e5f0762eebd03026256963ffb6"
+    },
+    {
+      "path": "images/image-07.png",
+      "role": "image",
+      "imageIndex": 7,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 11,
+        "byteOffset": 46679611,
+        "byteLength": 4235767
+      },
+      "bytes": 4235767,
+      "sha256": "ee2f5eae7ca3ddddfaa690335a8df46f0568d29c40681a12668a145b678cb620"
+    },
+    {
+      "path": "images/image-08.png",
+      "role": "image",
+      "imageIndex": 8,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 12,
+        "byteOffset": 50915378,
+        "byteLength": 3427824
+      },
+      "bytes": 3427824,
+      "sha256": "f53d4127a13809e5c338a74a42bb4ae21727ad2d30a595b586909d9694618dd6"
+    },
+    {
+      "path": "images/image-09.jpg",
+      "role": "image",
+      "imageIndex": 9,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 13,
+        "byteOffset": 54343202,
+        "byteLength": 2385464
+      },
+      "bytes": 2385464,
+      "sha256": "07a8cf8402c8077e05c21ee357d808ebef67b74d55ceda49dcaf5779b3c5fb58"
+    },
+    {
+      "path": "images/image-10.png",
+      "role": "image",
+      "imageIndex": 10,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 14,
+        "byteOffset": 56728666,
+        "byteLength": 4932047
+      },
+      "bytes": 4932047,
+      "sha256": "c171418a46204266c2f5b0b07b0f3827cb6f3c3ac7e4bcfb8bad733556e49ded"
+    },
+    {
+      "path": "images/image-11.png",
+      "role": "image",
+      "imageIndex": 11,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 15,
+        "byteOffset": 61660713,
+        "byteLength": 2676805
+      },
+      "bytes": 2676805,
+      "sha256": "d17ba13185fdce98506a17536b79af59c3e395ed1c28aad1b06e9708dbb3390d"
+    },
+    {
+      "path": "images/image-12.jpg",
+      "role": "image",
+      "imageIndex": 12,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceRange": {
+        "bufferView": 16,
+        "byteOffset": 64337518,
+        "byteLength": 137531
+      },
+      "bytes": 137531,
+      "sha256": "cb686e7bc6726651fed753544bf1cebcb8b04bfb04a93e155f486dd00de201f6"
+    },
+    {
+      "path": "images/image-13.png",
+      "role": "image",
+      "imageIndex": 13,
+      "mimeType": "image/png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceRange": {
+        "bufferView": 17,
+        "byteOffset": 64475049,
+        "byteLength": 907203
+      },
+      "bytes": 907203,
+      "sha256": "5f9b17a6b8912914c15eaf6db18bc8c16cbbe29b0c589ccc77bd6cdae65d7bd1"
+    },
+    {
+      "path": "images/image-14.png",
+      "role": "image",
+      "imageIndex": 14,
+      "mimeType": "image/png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceRange": {
+        "bufferView": 18,
+        "byteOffset": 65382252,
+        "byteLength": 149185
+      },
+      "bytes": 149185,
+      "sha256": "de56c98b7bc272e2be40b24edfeac51f096775b830c4c05511acbb2744919426"
+    },
+    {
+      "path": "images/image-15.jpg",
+      "role": "image",
+      "imageIndex": 15,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 19,
+        "byteOffset": 65531437,
+        "byteLength": 945859
+      },
+      "bytes": 945859,
+      "sha256": "e5ab727d6bd544eb38976bf63f7c2e4ca095b0ded4ce56d3742228e282d677e9"
+    },
+    {
+      "path": "images/image-16.png",
+      "role": "image",
+      "imageIndex": 16,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 20,
+        "byteOffset": 66477296,
+        "byteLength": 9035625
+      },
+      "bytes": 9035625,
+      "sha256": "f1ecc369b9c605ec9f852afa4bcf9a72251c3e67a6a34e68f5a3dbf13e655a1b"
+    },
+    {
+      "path": "images/image-17.png",
+      "role": "image",
+      "imageIndex": 17,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 21,
+        "byteOffset": 75512921,
+        "byteLength": 3185055
+      },
+      "bytes": 3185055,
+      "sha256": "9b13730fea1c64583f0a3593e5fcfa6f9f68ab396ce9c8b143dc57f5b1d8ae11"
+    },
+    {
+      "path": "images/image-18.jpg",
+      "role": "image",
+      "imageIndex": 18,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 22,
+        "byteOffset": 78697976,
+        "byteLength": 3823654
+      },
+      "bytes": 3823654,
+      "sha256": "81f44e7294b02365c9e182efd9cfccca0f9ca29c48c5d025ca47a5a600fb2f85"
+    },
+    {
+      "path": "images/image-19.png",
+      "role": "image",
+      "imageIndex": 19,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 23,
+        "byteOffset": 82521630,
+        "byteLength": 5987593
+      },
+      "bytes": 5987593,
+      "sha256": "c12a06169d9cc5f503226b085858d01874e18a46583dfee1cad05477401b455a"
+    },
+    {
+      "path": "images/image-20.png",
+      "role": "image",
+      "imageIndex": 20,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 24,
+        "byteOffset": 88509223,
+        "byteLength": 3595264
+      },
+      "bytes": 3595264,
+      "sha256": "184ee273b1a42eac7405c11f164565547b4bc096357816ca25cc18bb4f7f4360"
+    },
+    {
+      "path": "images/image-21.jpg",
+      "role": "image",
+      "imageIndex": 21,
+      "mimeType": "image/jpeg",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 25,
+        "byteOffset": 92104487,
+        "byteLength": 1933055
+      },
+      "bytes": 1933055,
+      "sha256": "5a054ee4df4e5938e0d94bf49c1f1d1cbce88f8e5678cd7c6fdcc232df1f3070"
+    },
+    {
+      "path": "images/image-22.png",
+      "role": "image",
+      "imageIndex": 22,
+      "mimeType": "image/png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceRange": {
+        "bufferView": 26,
+        "byteOffset": 94037542,
+        "byteLength": 5597446
+      },
+      "bytes": 5597446,
+      "sha256": "fb20d0f2ac562f3a0882178b9d62f95abd49f5a08494bb7c1ce8afa4e899e8ac"
+    }
+  ]
+}
