@@ -9,13 +9,24 @@
 .experience{position:relative;overflow-anchor:none}.project-controls button{width:54px;height:54px}
 .last-viewport{height:var(--visible-viewport-height,100vh)}
 
+/* Touch scenes have a virtual position: moving through them must never pan the
+   document or hand the gesture to the browser's collapsible address bar. */
+.viewport-probe{position:fixed;width:1px;height:100svh;visibility:hidden;pointer-events:none}
+html.controlled-story,html.controlled-story body{height:100%;overflow:hidden;overscroll-behavior:none}
+html.controlled-story body{position:fixed;inset:0}
+.experience[data-scroll-mode='controlled']{position:fixed;inset:0;overflow:clip;touch-action:pinch-zoom}
+.experience[data-scroll-mode='controlled'] .fixed-stage{bottom:auto;height:var(--scene-viewport-height);touch-action:pinch-zoom}
+.experience[data-scroll-mode='controlled'] .project-controls{top:calc(var(--scene-viewport-height)*.93 - 54px);bottom:auto}
+@media(max-width:899px){.experience[data-scroll-mode='controlled'] .project-controls{top:calc(var(--scene-viewport-height)*.95 - 54px)}}
+.experience[data-native-zoom='true'],.experience[data-native-zoom='true'] .fixed-stage{touch-action:auto}
+
 .experience:not(.is-fallback) .semantic-copy:focus-within{position:fixed;left:24px;right:24px;bottom:24px;z-index:20;width:auto;height:auto;clip:auto;white-space:normal;padding:20px;background:#14111f;border:1px solid #cdbf79}.experience:not(.is-fallback) .semantic-copy:focus-within h1{font-size:28px}.experience:not(.is-fallback) .semantic-copy:focus-within p{font:14px/1.5 system-ui;margin:12px 0}.experience:not(.is-fallback) .semantic-copy:focus-within button{padding:10px 14px;background:#302f9e;border:1px solid #eee9dc66}
 
 .project-link{position:fixed;pointer-events:auto;color:transparent;text-align:center;text-decoration:none}.project-link:focus-visible{background:#181525;color:var(--paper);padding:10px}.is-fallback .project-link{position:static;color:var(--paper);width:auto!important;height:auto!important;padding:12px}.is-fallback .project-controls{flex-wrap:wrap;gap:12px;max-width:760px}
 .experience:not(.is-fallback)[data-project-exiting='true'] .project-controls{visibility:hidden}
 
 /* Canvas controls follow the measured first-scene geometry. */
-.experience[data-active-scene="hero"] .hero-scroll-control{left:var(--hero-cta-left);top:var(--hero-cta-top);width:var(--hero-cta-width);height:var(--hero-cta-height)}
+.experience:not(.is-fallback) .hero-scroll-control{left:var(--hero-cta-left);top:var(--hero-cta-top);width:var(--hero-cta-width);height:var(--hero-cta-height)}
 .project-controls{left:5%;right:5%}.fixed-stage{touch-action:pan-y}
 @media(max-width:899px){.project-controls{left:7%;right:7%}}
 

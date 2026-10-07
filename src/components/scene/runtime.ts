@@ -4,6 +4,11 @@ export { SCROLL_SCREENS } from '../../config/scenes.ts';
 /** Mutable frame data; pointer/scroll/animation never trigger React renders. */
 export interface SceneRuntime {
   storyHeight: number;
+  sceneHeight: number;
+  visibleHeight: number;
+  scrollPosition: number;
+  scrollLimit: number;
+  controlledScroll: boolean;
   progress: number;
   intro: number;
   bootProgress: number;
@@ -22,7 +27,7 @@ export interface SceneRuntime {
   menuSignalProgress: number;
 }
 export function createRuntime(): SceneRuntime {
-  return { storyHeight: 0, progress: 0, intro: 0, bootProgress: 0, time: 0, pointerX: 0, pointerY: 0, projectIndex: 0, projectPosition: 0, projectTarget: 0, projectFrom: 0, projectMotion: 1, menuOpen: false, hovered: '', reducedMotion: false, menuSignalActive: false, menuSignalProgress: 0 };
+  return { storyHeight: 0, sceneHeight: 0, visibleHeight: 0, scrollPosition: 0, scrollLimit: 0, controlledScroll: false, progress: 0, intro: 0, bootProgress: 0, time: 0, pointerX: 0, pointerY: 0, projectIndex: 0, projectPosition: 0, projectTarget: 0, projectFrom: 0, projectMotion: 1, menuOpen: false, hovered: '', reducedMotion: false, menuSignalActive: false, menuSignalProgress: 0 };
 }
 export function heroTravel(progress: number) {
   return clampProgress(progress / scenes[0].end);

@@ -37,6 +37,7 @@ const rendererStatusText: Record<RendererStatus, string> = {
 
 export function WorkspacePreview() {
   const container = useRef<HTMLDivElement>(null);
+  const viewportProbe = useRef<HTMLDivElement>(null);
   const runtime = useRef(createRuntime());
   const headerRef = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -88,30 +89,51 @@ export function WorkspacePreview() {
   }, [fallback]);
 
   useLayoutEffect(() => {
-    let viewport = { width: window.innerWidth, height: window.innerHeight };
-    let contactTravel = 0;
     const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    const controlled = touch && !fallback;
+    const initialScroll = runtime.current.controlledScroll ? runtime.current.scrollPosition : window.scrollY;
+    runtime.current.controlledScroll = controlled;
+    runtime.current.scrollPosition = initialScroll;
+    document.documentElement.classList.toggle('controlled-story', controlled);
+    container.current?.setAttribute('data-scroll-mode', controlled ? 'controlled' : 'native');
+    const measure = () => ({
+      width: window.innerWidth,
+      // svh is the space with browser chrome expanded, even when opened from a
+      // page whose address bar is already collapsed. It does not disable zoom.
+      height: controlled ? Math.min(window.innerHeight, viewportProbe.current?.clientHeight || window.innerHeight) : window.innerHeight,
+    });
+    let viewport = measure();
+    let contactTravel = 0;
+    let visibleHeight = viewport.height;
     const resizeStory = () => {
-      const scroll = window.scrollY;
-      const visible = { width: window.innerWidth, height: window.innerHeight };
+      const scroll = runtime.current.controlledScroll ? runtime.current.scrollPosition : window.scrollY;
+      const visible = measure();
       const next = storyViewport(viewport, visible, touch);
-      if (next.width !== viewport.width || next.height !== viewport.height) contactTravel = 0;
+      if (next.width !== viewport.width || next.height !== viewport.height) {
+        contactTravel = 0;
+        visibleHeight = next.height;
+      }
       viewport = next;
       runtime.current.storyHeight = viewport.height;
+      runtime.current.sceneHeight = controlled ? viewport.height : window.innerHeight;
+      visibleHeight = controlled ? Math.min(visibleHeight, window.innerHeight) : window.innerHeight;
+      runtime.current.visibleHeight = visibleHeight;
       container.current?.style.setProperty('--story-viewport-height', `${viewport.height}px`);
+      container.current?.style.setProperty('--scene-viewport-height', `${runtime.current.sceneHeight}px`);
       container.current?.style.setProperty('--visible-viewport-height', `${window.innerHeight}px`);
-      // Chrome may shrink a page opened with the toolbar hidden. Reserve enough
-      // travel for the footer, but never shrink that range underneath the reader.
-      contactTravel = Math.max(contactTravel, contactLayout(visible.width, visible.height).travel);
+      contactTravel = Math.max(contactTravel, contactLayout(visible.width, runtime.current.sceneHeight, 0, viewport.height, visibleHeight).travel);
+      runtime.current.scrollLimit = sceneScrollTop('contact', viewport.height) + Math.ceil(contactTravel) + 1;
       container.current?.style.setProperty('--contact-scroll-height', `${Math.ceil(contactTravel) + 3}px`);
-      // Capture before changing document height: rotation can otherwise clamp
-      // the old position before the scroll owner gets a chance to preserve it.
       window.dispatchEvent(new CustomEvent('study-layout-change', { detail: { scroll } }));
     };
     resizeStory();
+    if (controlled) window.scrollTo({ top: 0, behavior: 'instant' });
     window.addEventListener('resize', resizeStory, { passive: true });
-    return () => window.removeEventListener('resize', resizeStory);
-  }, []);
+    return () => {
+      document.documentElement.classList.remove('controlled-story');
+      window.removeEventListener('resize', resizeStory);
+    };
+  }, [fallback]);
 
   useEffect(() => {
     const measure = document.createElement('canvas').getContext('2d');
@@ -201,7 +223,7 @@ export function WorkspacePreview() {
   useEffect(() => {
     const updatePointer = (event: PointerEvent) => {
       runtime.current.pointerX = (event.clientX / window.innerWidth - .5) * 2;
-      runtime.current.pointerY = -(event.clientY / window.innerHeight - .5) * 2;
+      runtime.current.pointerY = -(event.clientY / runtime.current.sceneHeight - .5) * 2;
     };
     window.addEventListener('pointermove', updatePointer, { passive: true });
     const resetPointer = () => {
@@ -212,7 +234,8 @@ export function WorkspacePreview() {
     window.addEventListener('blur', resetPointer);
     const syncSceneControls = () => {
       if (!container.current) return;
-      const state = getSceneState(storyProgress(window.scrollY, runtime.current.storyHeight));
+      const scroll = runtime.current.controlledScroll ? runtime.current.scrollPosition : window.scrollY;
+      const state = getSceneState(storyProgress(scroll, runtime.current.storyHeight));
       const sceneId = fallback
         ? scenes.findLast(scene => (document.getElementById(scene.id)?.getBoundingClientRect().top ?? Infinity) <= 100)?.id ?? 'hero'
         : state.scene.id;
@@ -220,12 +243,12 @@ export function WorkspacePreview() {
         container.current.dataset.activeScene = sceneId;
         setActiveScene(sceneId);
       }
-      container.current.dataset.heroAtRest = String(window.scrollY < 1);
+      container.current.dataset.heroAtRest = String(scroll < 1);
       const aperture = sampleProjectAbout(state.progress);
       container.current.dataset.projectExiting = String(state.scene.id === 'projects' && aperture > 0);
       if (projectControls.current) projectControls.current.inert = !fallback && (state.scene.id !== 'projects' || aperture > 0);
       if (contactControls.current) {
-        const layout = contactLayout(window.innerWidth, window.innerHeight, state.localProgress, runtime.current.storyHeight);
+        const layout = contactLayout(window.innerWidth, runtime.current.sceneHeight, state.localProgress, runtime.current.storyHeight, runtime.current.visibleHeight);
         for (const link of contactControls.current.querySelectorAll<HTMLAnchorElement>('a')) {
           const bounds = link.dataset.contactAction === 'github' ? layout.github : layout.invitation;
           Object.assign(link.style, {
@@ -239,11 +262,11 @@ export function WorkspacePreview() {
       }
     };
     const positionSceneControls = () => {
-      const bounds = heroPromptLayout(window.innerWidth, window.innerHeight);
+      const bounds = heroPromptLayout(window.innerWidth, runtime.current.sceneHeight);
       for (const key of ['left', 'top', 'width', 'height'] as const) {
         container.current?.style.setProperty(`--hero-cta-${key}`, `${bounds[key]}px`);
       }
-      const caption = projectCaptionLayout(window.innerWidth, window.innerHeight);
+      const caption = projectCaptionLayout(window.innerWidth, runtime.current.sceneHeight);
       for (const link of projectControls.current?.querySelectorAll<HTMLElement>('[data-project-link]') ?? []) {
         const box = link.dataset.projectLink === 'repository' ? caption.repository : caption.website;
         Object.assign(link.style, {
@@ -255,6 +278,7 @@ export function WorkspacePreview() {
       }
     };
     window.addEventListener('scroll', syncSceneControls, { passive: true });
+    window.addEventListener('study-story-scroll', syncSceneControls);
     window.addEventListener('resize', positionSceneControls, { passive: true });
     window.addEventListener('resize', syncSceneControls, { passive: true });
     syncSceneControls();
@@ -262,6 +286,7 @@ export function WorkspacePreview() {
     return () => {
       window.removeEventListener('pointermove', updatePointer);
       window.removeEventListener('scroll', syncSceneControls);
+      window.removeEventListener('study-story-scroll', syncSceneControls);
       window.removeEventListener('resize', positionSceneControls);
       window.removeEventListener('resize', syncSceneControls);
       document.documentElement.removeEventListener('pointerleave', resetPointer);
@@ -331,7 +356,7 @@ export function WorkspacePreview() {
     let pressed = false, startX = 0, startY = 0;
     const available = () => {
       const state = getSceneState(runtime.current.progress);
-      return state.scene.id === 'projects' && sampleProjectAbout(state.progress) === 0 && !runtime.current.menuOpen && !runtime.current.menuSignalActive;
+      return Math.abs((window.visualViewport?.scale ?? 1) - 1) < .01 && state.scene.id === 'projects' && sampleProjectAbout(state.progress) === 0 && !runtime.current.menuOpen && !runtime.current.menuSignalActive;
     };
     const choose = (event: Event) => {
       if (available()) cycle((event as CustomEvent<number>).detail);
@@ -389,7 +414,9 @@ export function WorkspacePreview() {
     <SmoothScroll
       runtime={runtime}
       reducedMotion={reducedMotion}
+      fallback={fallback}
     />
+    <div ref={viewportProbe} className="viewport-probe" aria-hidden="true" />
     <a
       className="skip-link"
       href="#accessible-content"

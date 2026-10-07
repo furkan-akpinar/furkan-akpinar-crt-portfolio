@@ -47,9 +47,9 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   const diagnostics = { passes: [] as string[], scene: "about-us" as SceneId, progress: 0, curl: 0, assetErrors: [] as string[], proxies: ["video-calibrated intact page curl"] };
 
   function drawUI(id: LaterId, progress: number, runtime: SceneRuntime) {
-    const key = `${w}/${h}/${runtime.storyHeight}/${Math.round(progress * 500)}/${runtime.projectIndex}/${runtime.reducedMotion}`;
+    const key = `${w}/${h}/${runtime.storyHeight}/${runtime.visibleHeight}/${Math.round(progress * 500)}/${runtime.projectIndex}/${runtime.reducedMotion}`;
     if (uiKeys.get(id) !== key) {
-      ui[id].draw({ mode: id, sceneProgress: progress, storyHeight: runtime.storyHeight, bootProgress: 1, projectIndex: runtime.projectIndex, headerVisible: false });
+      ui[id].draw({ mode: id, sceneProgress: progress, storyHeight: runtime.storyHeight, visibleHeight: runtime.visibleHeight, bootProgress: 1, projectIndex: runtime.projectIndex, headerVisible: false });
       uiKeys.set(id, key);
     }
     renderer.autoClear = false; renderer.render(uiScenes[id], uiCamera);

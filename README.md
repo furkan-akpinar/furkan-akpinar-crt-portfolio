@@ -53,7 +53,7 @@ Ana Sayfa ile Projeler arasında kamera monitöre yaklaşır; proje sahnesi ekra
 | React / 3D bağlantısı | **React Three Fiber 9.8.1** | Kalıcı canvas’ın yaşam döngüsü ve manuel render saati. |
 | Shader | **Three Shading Language** | Özel materyaller, geometrik dönüşümler, CRT ve geçiş efektleri. |
 | Animasyon | **GSAP 3.15.0**, **@gsap/react 2.1.2** | Açılış, proje seçimi, menü geçişleri ve ortak animasyon saati. |
-| Kaydırma | **Lenis 1.3.26**, **ScrollTrigger** | Yumuşak kaydırma ve sahne ilerlemesinin eşzamanlı tutulması. |
+| Kaydırma | **Lenis 1.3.26**, **ScrollTrigger**, kontrollü dokunma | Masaüstünde yumuşak kaydırma; mobilde belgeyi kaydırmadan sahne ilerlemesi. |
 | Kalite | **ESLint 9**, **Node test runner** | Statik kontrol ve TypeScript testleri. |
 | Yayın | **Cloudflare Workers Static Assets** | Statik çıktının ve görsel varlıkların sunulması. |
 
@@ -76,6 +76,8 @@ flowchart TD
 ```
 
 **Tek saat.** GSAP ticker; Lenis’in kaydırma güncellemesini ve React Three Fiber’ın manuel render döngüsünü ilerletir. Kaydırma, işaretçi ve animasyon verileri her karede React bileşenlerini yeniden çizdirmek yerine ortak çalışma zamanı nesnesinde tutulur.
+
+**Sabit mobil sahne.** Dokunmatik grafik görünümünde parmak hareketleri ortak sahne konumunu günceller; belge yerinde kalır. Böylece tarayıcı araç çubuğuna bağlı yükseklik değişimleri sahneyi yeniden ölçeklemez. Yön değişimi sahne konumunu koruyarak yeniden yerleşir. Yakınlaştırma tarayıcıya bırakılır; grafik desteği olmadığında içerik doğal belge kaydırmasına döner.
 
 **Birleşik görünüm.** Başlıklar ve görsel arayüz parçaları yardımcı 2D canvas’larda dokuya dönüştürülür. Bu dokular 3D görüntüyle aynı kompozisyonda işlendiği için yazı, film ve ekran efektleri birbirinden kopmaz. Etkileşim ve erişilebilirlik için gerçek HTML kontrolleri ayrıca korunur.
 

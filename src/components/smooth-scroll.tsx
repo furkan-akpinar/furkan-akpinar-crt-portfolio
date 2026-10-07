@@ -11,19 +11,29 @@ import { MENU_SIGNAL_DURATION, monitorMenuTransition, type MenuNavigationRequest
 import { sceneScrollTop, storyProgress, SCROLL_SCREENS } from './scene/runtime';
 import { getSceneState, type SceneId } from '@/config/scenes';
 import { resizeScrollTarget } from './scene/viewport-resize';
+import { createMobileScroll, type ScrollDriver } from './scene/mobile-scroll';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface SmoothScrollProps {
   runtime: RefObject<SceneRuntime>;
   reducedMotion: boolean;
+  fallback: boolean;
 }
 
-export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
+export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollProps) {
   useEffect(() => {
     let gesture = createIntroGestureState();
     let lenis: Lenis | null = null;
-    let viewport = { width: window.innerWidth, height: runtime.current.storyHeight };
+    let driver: ScrollDriver | null = null;
+    const data = runtime.current;
+    const controlled = data.controlledScroll;
+    const readScroll = () => controlled ? data.scrollPosition : window.scrollY;
+    const updateProgress = () => {
+      data.scrollPosition = readScroll();
+      data.progress = storyProgress(data.scrollPosition, data.storyHeight);
+    };
+    let viewport = { width: window.innerWidth, height: data.storyHeight };
     let disposed = false;
     let signalTimeline: gsap.core.Timeline | null = null;
     let pending: MenuNavigationRequest | null = null;
@@ -36,7 +46,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       if (deltaX === 0 && deltaY === 0) return true;
       // false bypasses Lenis without cancelling the browser's modifier gesture.
       if (event instanceof WheelEvent && (event.ctrlKey || event.metaKey)) return false;
-      if (runtime.current.menuSignalActive || monitorTarget !== null) {
+      if (data.menuSignalActive || monitorTarget !== null) {
         event.preventDefault();
         return false;
       }
@@ -55,10 +65,10 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         deltaY,
         wheelSteps,
         time: performance.now(),
-        scroll: window.scrollY,
-        viewportHeight: runtime.current.storyHeight,
-        ready: runtime.current.intro >= 1,
-        menuOpen: runtime.current.menuOpen,
+        scroll: readScroll(),
+        viewportHeight: data.storyHeight,
+        ready: data.intro >= 1,
+        menuOpen: data.menuOpen,
       });
       gesture = result.state;
       if (result.action.type === 'pass') return true;
@@ -68,8 +78,8 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         window.dispatchEvent(new CustomEvent('study-project', { detail: result.action.direction }));
       }
       if (result.action.type === 'snap') {
-        if (lenis) {
-          lenis.scrollTo(result.action.top, {
+        if (driver) {
+          driver.scrollTo(result.action.top, {
             duration: result.action.duration,
             lock: true,
             force: true,
@@ -81,8 +91,8 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       }
       if (result.action.type === 'aperture' || result.action.type === 'curl') {
         // A new detent may retarget or reverse immediately; this is not a lock.
-        if (lenis) {
-          lenis.scrollTo(result.action.top, {
+        if (driver) {
+          driver.scrollTo(result.action.top, {
             duration: result.action.duration,
             programmatic: false,
             force: true,
@@ -95,42 +105,54 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       return false;
     };
 
-    if (!reducedMotion) {
+    const element = document.querySelector<HTMLElement>('.experience');
+    if (controlled && element) {
+      driver = createMobileScroll({
+        target: element,
+        read: readScroll,
+        write: position => {
+          data.scrollPosition = position;
+          updateProgress();
+          window.dispatchEvent(new Event('study-story-scroll'));
+        },
+        limit: () => data.scrollLimit,
+        reducedMotion,
+        arbitrate: arbitrateGesture,
+      });
+    } else if (!reducedMotion) {
       lenis = new Lenis({
         autoRaf: false,
         anchors: false,
         duration: 0.9,
         virtualScroll: ({ deltaX, deltaY, event }) => arbitrateGesture(deltaX, deltaY, event),
       });
+      driver = lenis;
     }
     const handleNativeWheel = (event: WheelEvent) => {
-      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? runtime.current.storyHeight : 1;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? data.storyHeight : 1;
       arbitrateGesture(event.deltaX * unit, event.deltaY * unit, event);
     };
-    if (reducedMotion) window.addEventListener('wheel', handleNativeWheel, { passive: false });
+    if (reducedMotion && !controlled) window.addEventListener('wheel', handleNativeWheel, { passive: false });
 
     const advanceScrollClock = (time: number) => lenis?.raf(time * 1000);
     lenis?.on('scroll', ScrollTrigger.update);
     if (lenis) gsap.ticker.add(advanceScrollClock);
-    const updateProgress = () => {
-      runtime.current.progress = storyProgress(window.scrollY, runtime.current.storyHeight);
-    };
-    const trigger = ScrollTrigger.create({
+    const trigger = controlled ? null : ScrollTrigger.create({
       start: 0,
-      end: () => SCROLL_SCREENS * runtime.current.storyHeight,
+      end: () => SCROLL_SCREENS * data.storyHeight,
       onUpdate: updateProgress,
       onRefresh: updateProgress,
     });
     const syncProgress = () => {
       updateProgress();
-      ScrollTrigger.update();
+      if (!controlled) ScrollTrigger.update();
     };
 
     const commitSignalNavigation = () => {
       if (!pending || committed) return;
       committed = true;
-      const top = sceneScrollTop(pending.id, runtime.current.storyHeight);
-      if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
+      const top = sceneScrollTop(pending.id, data.storyHeight);
+      if (driver) driver.scrollTo(top, { immediate: true, force: true });
       else window.scrollTo({ top, behavior: 'instant' });
       syncProgress();
     };
@@ -138,17 +160,17 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       const id = pending?.id;
       pending = null;
       signalTimeline = null;
-      runtime.current.menuSignalActive = false;
-      runtime.current.menuSignalProgress = 0;
+      data.menuSignalActive = false;
+      data.menuSignalProgress = 0;
       gesture = createIntroGestureState();
-      lenis?.start();
+      driver?.start();
       window.dispatchEvent(new CustomEvent('study-menu-signal', { detail: { active: false, id } }));
     };
     const completeSignal = () => {
       signalTimeline?.progress(1);
     };
     const handleNavigation = (event: Event) => {
-      if (runtime.current.menuSignalActive) return;
+      if (data.menuSignalActive) return;
       const request = (event as CustomEvent<number | MenuNavigationRequest>).detail;
       const top = typeof request === 'number' ? request : request.top;
       gesture = createIntroGestureState();
@@ -158,13 +180,13 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         pending = request;
         committed = false;
         // Stop any in-flight monitor/scroll journey before the signal covers it.
-        lenis?.scrollTo(window.scrollY, { immediate: true, force: true });
-        lenis?.stop();
-        runtime.current.menuSignalActive = true;
-        runtime.current.menuSignalProgress = 0;
+        driver?.scrollTo(readScroll(), { immediate: true, force: true });
+        driver?.stop();
+        data.menuSignalActive = true;
+        data.menuSignalProgress = 0;
         window.dispatchEvent(new CustomEvent('study-menu-signal', { detail: { active: true, id: request.id } }));
         signalTimeline = gsap.timeline({ onComplete: finishSignalNavigation })
-          .to(runtime.current, { menuSignalProgress: 1, duration: MENU_SIGNAL_DURATION, ease: 'none' }, 0)
+          .to(data, { menuSignalProgress: 1, duration: MENU_SIGNAL_DURATION, ease: 'none' }, 0)
           .call(commitSignalNavigation, [], MENU_SIGNAL_DURATION * .5);
         return;
       }
@@ -176,18 +198,18 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         // Repeated clicks do not restart the same journey. A reverse click uses
         // the live scroll position with the same curve, even before scene handoff.
         if (monitorTarget === request.id) return;
-        const from = monitorTarget ?? getSceneState(storyProgress(window.scrollY, runtime.current.storyHeight)).scene.id;
-        const journey = monitorMenuTransition(from, request.id, runtime.current.storyHeight);
+        const from = monitorTarget ?? getSceneState(storyProgress(readScroll(), data.storyHeight)).scene.id;
+        const journey = monitorMenuTransition(from, request.id, data.storyHeight);
         if (journey) {
           // Cancel a reversal even when no animation frame has moved yet; Lenis
           // otherwise treats the current position as an already-reached target.
           if (monitorTarget !== null) {
-            lenis?.stop();
-            lenis?.start();
+            driver?.stop();
+            driver?.start();
           }
           monitorTarget = request.id;
-          if (lenis) {
-            lenis.scrollTo(journey.top, {
+          if (driver) {
+            driver.scrollTo(journey.top, {
               duration: journey.duration,
               easing: introSnapEase,
               force: true,
@@ -203,7 +225,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       }
 
       monitorTarget = null;
-      if (lenis) lenis.scrollTo(top, { duration: 1.15, force: true, lock: true });
+      if (driver) driver.scrollTo(top, { duration: 1.15, force: true, lock: true });
       else window.scrollTo({ top, behavior: 'instant' });
     };
     window.addEventListener('study-navigate', handleNavigation);
@@ -211,15 +233,16 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
 
     const blockNavigationKey = (event: KeyboardEvent) => {
       if (
-        (runtime.current.menuSignalActive || monitorTarget !== null)
+        (data.menuSignalActive || monitorTarget !== null)
         && !event.ctrlKey && !event.metaKey && !event.altKey
         && ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)
       ) event.preventDefault();
     };
     const blockNavigationTouch = (event: TouchEvent) => {
       if (
-        (runtime.current.menuSignalActive || monitorTarget !== null)
+        (data.menuSignalActive || monitorTarget !== null)
         && event.touches.length === 1
+        && Math.abs((window.visualViewport?.scale ?? 1) - 1) < .01
       ) event.preventDefault();
     };
     const handleVisibilityChange = () => {
@@ -231,35 +254,36 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
 
     const refreshLayout = (event?: Event) => {
       if (disposed) return;
-      const next = { width: window.innerWidth, height: runtime.current.storyHeight };
-      const scroll = event instanceof CustomEvent ? (event.detail as { scroll: number }).scroll : window.scrollY;
+      const next = { width: window.innerWidth, height: data.storyHeight };
+      const scroll = event instanceof CustomEvent ? (event.detail as { scroll: number }).scroll : readScroll();
       const top = resizeScrollTarget(scroll, viewport, next);
       // A toolbar resize must not reset native inertia, gesture latches or a
       // menu journey. Lenis observes the visible scroll limit independently.
       if (top === null) return;
       gesture = createIntroGestureState();
       viewport = next;
-      lenis?.resize();
+      driver?.resize();
       if (!document.querySelector('.experience')?.classList.contains('is-fallback')) {
         monitorTarget = null;
-        if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
+        if (driver) driver.scrollTo(top, { immediate: true, force: true });
         else window.scrollTo({ top, behavior: 'instant' });
       }
-      ScrollTrigger.refresh();
+      if (!controlled) ScrollTrigger.refresh();
       syncProgress();
     };
     window.addEventListener('study-layout-change', refreshLayout);
     // The trigger's initial refresh supplies restored scroll progress as well.
-    trigger.refresh();
+    trigger?.refresh();
+    queueMicrotask(() => { if (!disposed) updateProgress(); });
 
     return () => {
       disposed = true;
       completeSignal();
       signalTimeline?.kill();
-      trigger.kill();
+      trigger?.kill();
       gsap.ticker.remove(advanceScrollClock);
       lenis?.off('scroll', ScrollTrigger.update);
-      lenis?.destroy();
+      driver?.destroy();
       window.removeEventListener('wheel', handleNativeWheel);
       window.removeEventListener('study-navigate', handleNavigation);
       window.removeEventListener('study-navigation-cancel', completeSignal);
@@ -268,6 +292,6 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('study-layout-change', refreshLayout);
     };
-  }, [reducedMotion, runtime]);
+  }, [reducedMotion, runtime, fallback]);
   return null;
 }
