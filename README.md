@@ -140,6 +140,8 @@ npm run dev
 
 Terminalde verilen yerel adresi açın. Windows PowerShell’de komut yürütme ayarları gerektiriyorsa `npm` yerine `npm.cmd` kullanabilirsiniz.
 
+**ZIP paketinden kurulum:** Arşivi açıp `package.json` dosyasının bulunduğu `furkan-akpinar-crt-portfolio` klasöründe `npm ci` ve `npm run dev` çalıştırın; Git clone gerekmez. Paket gerekli model, görsel, video, font ve lisans dosyalarını içerir. `node_modules`, `.next`, `out`, `dist`, Git geçmişi ve eski çalışma arşivleri bilerek dahil edilmez; gerekli çıktılar komutlarla yeniden üretilir. Orijinal büyük GLB dosyası gerekli değildir: masaüstü ve mobil glTF paketleri kendi manifestleriyle doğrulanır.
+
 Üretim paketini yerelde görmek için:
 
 ```bash
@@ -167,6 +169,8 @@ Testler; sahne sınırları, ileri/geri kaydırma, girişlerin birleştirilmesi,
 Yayın öncesinde `npm run check` ve `npm run build` çalıştırılır. Ardından üretim önizlemesi masaüstü, tablet ve mobil ölçülerde görsel olarak kontrol edilir. Komutların başarılı olması, tarayıcıdaki görsel ve etkileşim kontrolünün yerine geçmez.
 
 Ek uyumluluk denetimleri için yerel adrese `?renderer=webgl` veya `?renderer=none` eklenerek WebGL2 ve metin görünümü yolları açılabilir. GitHub Actions, her `main` gönderiminde ve pull request'te model bütünlüğünü, tür kontrolünü, lint'i, testleri ve üretim derlemesini doğrular.
+
+Tekrarlanabilir GPU ve dokunma kontrol araçları [qa/README.md](qa/README.md) içinde açıklanır. Temiz paket değişiklikleri ve teslim doğrulaması [CLEANUP_REPORT.md](CLEANUP_REPORT.md) içinde kayıtlıdır.
 
 ## Cloudflare üzerinde yayınlama
 
@@ -198,6 +202,7 @@ src/
 public/                   Posterler, fontlar, modeller ve medya
 tests/                    TypeScript testleri
 scripts/                  Kayıpsız varlık hazırlama ve statik paket doğrulama
+qa/                       Üretim tarayıcısı ve dokunma doğrulama araçları
 .github/media/            README ekran görüntüleri
 ```
 
@@ -205,7 +210,7 @@ scripts/                  Kayıpsız varlık hazırlama ve statik paket doğrula
 
 Metinler, menü etiketleri, proje sırası ve dış bağlantılar [`src/content/portfolio.ts`](src/content/portfolio.ts) içinde tutulur. Her proje; başlık, poster, web sitesi ve GitHub hedefiyle tanımlanır.
 
-Yeni bir poster eklerken dosyayı `public/images/projects/posters/` altına yerleştirip proje kaydındaki `image` alanını güncelleyin. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez. Farklı bir varlık klasörü kullanılacaksa `.gitignore` ve `scripts/package-static.mjs` içindeki yayın listesi de güncellenmelidir.
+Yeni bir poster eklerken dosyayı `public/images/projects/posters/` altına yerleştirip proje kaydındaki `image` alanını güncelleyin. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez. Farklı bir varlık klasörü kullanılacaksa `scripts/package-static.mjs` içindeki yayın listesi de güncellenmelidir.
 
 Sahne aralıkları [`src/config/scenes.ts`](src/config/scenes.ts), görsel davranışlar ise `src/components/scene/` altında ayrı sorumluluklara bölünmüştür. İçerik değişikliklerinden sonra başlıkların sığması, bağlantılar ve mobil yerleşim kontrol edilmelidir.
 

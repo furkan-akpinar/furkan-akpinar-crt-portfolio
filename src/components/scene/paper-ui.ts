@@ -1,6 +1,5 @@
 import { CanvasTexture, LinearFilter, SRGBColorSpace } from "three/webgpu";
 import { portfolio } from "@/content/portfolio";
-import { paperEntryOffset, type CanvasActionBounds } from "./paper-action";
 
 const SERIF = '"STIX Two Text", Georgia, serif';
 export const PAPER = "#f0ead6";
@@ -194,8 +193,8 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number) {
   }
 
   draw();
-  return { texture, ready, resize, dispose,
-    get entryOffset() { return paperEntryOffset(width); },
-    get actionBounds(): CanvasActionBounds | null { return null; },
-    get width() { return width; }, get height() { return height; } };
+  return {
+    texture, ready, resize, dispose,
+    get height() { return height; },
+  };
 }

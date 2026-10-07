@@ -262,7 +262,7 @@ test('the Alamance foreground landmarks survive the narrower desktop viewport', 
   const camera = new THREE.PerspectiveCamera(42, 1440 / 900, 0.1, 500);
   const point = new THREE.Vector3();
   try {
-    ring.update(3, 0, false, 11, 8, 1440 / 900);
+    ring.update(3, false, 11, 8, 1440 / 900);
     camera.position.z = ring.layout.cameraDistance; camera.updateMatrixWorld();
     const screenX = (distance: number) => {
       filmPoint(distance, 0.4395, point); point.y += PROJECT_RING.centerY; point.project(camera);
@@ -313,7 +313,7 @@ test('the compact S stays below the navigation without enlarging the desktop hor
       [1918, 955, 7.8, 224.736, 1687.448, 872.253],
       [1440, 900, 8.604870129870129, 65.610, 1363.488, 791.271],
     ]) {
-      ring.update(0, 0, false, 11, 8, width / height);
+      ring.update(0, false, 11, 8, width / height);
       assert.ok(Math.abs(ring.layout.cameraDistance - cameraDistance) < 1e-10, 'the compactness check cannot be satisfied by moving the camera');
       ring.group.updateMatrixWorld();
       const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 500);
@@ -404,16 +404,16 @@ test('entry reveal stays in logical project order across the reusable slot pool'
     assert.equal(ring.diagnostics.entryStartIndex, 8);
     panels.forEach(panel => assert.equal(panel.userData.entryArcOrder, ringPosition(panel.userData.projectIndex - 8, 11)));
     for (const visible of [0, 2, 5.5, 9, 11, 5.5, 0]) {
-      ring.update(-5, 0, false, visible);
+      ring.update(-5, false, visible);
       assert.equal(ring.diagnostics.visiblePanels, visible);
       assert.equal(ring.diagnostics.position, -5, 'arc visibility cannot move the carousel');
       assert.deepEqual(ring.group.children, panels, 'entry and reverse entry preserve the physical slot meshes');
     }
-    ring.update(0, 0, false, 30);
+    ring.update(0, false, 30);
     assert.equal(ring.diagnostics.visiblePanels, 11);
-    ring.update(0, 0, false, -4);
+    ring.update(0, false, -4);
     assert.equal(ring.diagnostics.visiblePanels, 0);
-    ring.update(5, 0, false, 5.5, 2);
+    ring.update(5, false, 5.5, 2);
     assert.equal(ring.diagnostics.entryStartIndex, 2);
     panels.forEach(panel => assert.equal(panel.userData.entryArcOrder, ringPosition(panel.userData.projectIndex - 2, 11)));
     assert.equal(ring.diagnostics.position, 5, 'returning to another project moves the reveal origin, not panel ownership');
@@ -425,10 +425,9 @@ test('entry reveal stays in logical project order across the reusable slot pool'
   }
 });
 
-test('film cleanup releases shared geometry and materials once while preserving external render targets', () => {
+test('film cleanup releases shared geometry and materials once while preserving gallery textures', () => {
   const textures = Array.from({ length: 11 }, () => new THREE.Texture());
-  const portal = new THREE.Texture();
-  const ring = createProjectRing(textures, portal);
+  const ring = createProjectRing(textures);
   let geometryDisposals = 0;
   let materialDisposals = 0;
   let pathDisposals = 0;
@@ -439,10 +438,9 @@ test('film cleanup releases shared geometry and materials once while preserving 
   assert.ok(panels.every(panel => panel.userData.pathTexture === pathTexture), 'all slots share one distance lookup');
   pathTexture.addEventListener('dispose', () => pathDisposals++);
   panels.forEach(panel => panel.material.addEventListener('dispose', () => materialDisposals++));
-  [...textures, portal].forEach(item => item.addEventListener('dispose', () => textureDisposals++));
-  ring.update(12.2, 1, true);
+  textures.forEach(item => item.addEventListener('dispose', () => textureDisposals++));
+  ring.update(12.2, true);
   assert.equal(ring.layout.cameraDistance, PROJECT_RING.mobileCameraDistance);
-  assert.equal(ring.portalMix.value, 1);
   ring.dispose();
   ring.dispose();
   assert.equal(geometryDisposals, 1);
@@ -450,5 +448,5 @@ test('film cleanup releases shared geometry and materials once while preserving 
   assert.equal(pathDisposals, 1);
   assert.equal(textureDisposals, 0);
   assert.equal(ring.group.children.length, 0);
-  [...textures, portal].forEach(item => item.dispose());
+  textures.forEach(item => item.dispose());
 });

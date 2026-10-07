@@ -73,8 +73,8 @@ test('changing the media count retains the original entrance reveal, framing and
       for (const visiblePanels of [0, 2.5, 5.5, 7, 9, 11]) {
         const position = selectedPosition - 6.5 + visiblePanels / 11 * 6.5;
         const physicalStart = selectedPosition - 3;
-        personal.update(position, 0, false, visiblePanels, physicalStart, 1440 / 900);
-        previous.update(position, 0, false, visiblePanels, physicalStart, 1440 / 900);
+        personal.update(position, false, visiblePanels, physicalStart, 1440 / 900);
+        previous.update(position, false, visiblePanels, physicalStart, 1440 / 900);
         assert.deepEqual(personal.layout, previous.layout, 'media selection cannot resize the foreground or move the camera');
         assert.equal(personal.diagnostics.visiblePanels, visiblePanels, 'seven logical cards do not finish the eleven-panel entrance early');
         assert.equal(personal.diagnostics.entryStartIndex, previous.diagnostics.entryStartIndex);

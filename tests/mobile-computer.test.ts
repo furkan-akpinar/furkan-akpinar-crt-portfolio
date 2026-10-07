@@ -16,6 +16,21 @@ const desktop = JSON.parse(fs.readFileSync(path.join(modelRoot, 'web/commodore-6
 const mobile = JSON.parse(fs.readFileSync(path.join(modelRoot, 'mobile/commodore-64-1k.gltf'), 'utf8'));
 const manifest = JSON.parse(fs.readFileSync(path.join(modelRoot, 'mobile/conversion-manifest.json'), 'utf8'));
 
+function copyFixtureDirectory(source: string, destination: string) {
+  // Node 22.18 on Windows can abort inside fs.cpSync for non-ASCII source
+  // paths. These primitives preserve the same fixture bytes without that path.
+  fs.mkdirSync(destination, { recursive: true });
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    const from = path.join(source, entry.name);
+    const to = path.join(destination, entry.name);
+    if (entry.isDirectory()) copyFixtureDirectory(from, to);
+    else {
+      assert.ok(entry.isFile(), `Unexpected fixture type: ${from}`);
+      fs.copyFileSync(from, to);
+    }
+  }
+}
+
 test('small screens, coarse pointers and mobile agents select the bounded model before loading', () => {
   const desktopInputs = { viewportWidth: 1440, coarsePointer: false, mobileUserAgent: false };
   assert.equal(selectComputerTextureQuality(desktopInputs), 'desktop');
@@ -114,7 +129,7 @@ test('published mobile assets verify in a clean clone without Sharp or the archi
     fs.copyFileSync(path.join(root, 'scripts/prepare-mobile-computer.mjs'),
       path.join(temporary, 'scripts/prepare-mobile-computer.mjs'));
     for (const variant of ['web', 'mobile']) {
-      fs.cpSync(path.join(modelRoot, variant), path.join(temporary, 'public/models/commodore64', variant), { recursive: true });
+      copyFixtureDirectory(path.join(modelRoot, variant), path.join(temporary, 'public/models/commodore64', variant));
     }
     assert.equal(fs.existsSync(path.join(temporary, 'node_modules')), false);
     assert.equal(fs.existsSync(path.join(temporary, 'public/models/commodore64/commodore-64-4k.glb')), false);

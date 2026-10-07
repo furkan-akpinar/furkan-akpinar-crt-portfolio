@@ -8,16 +8,12 @@ import { projectCaptionLayout } from "./project-caption-layout";
 
 export interface UIOptions {
   mode: "hero" | "projects" | "project-title" | "contact" | "boot" | "header";
-  /** Progress of the physical camera move into the computer's screen. */
-  progress: number;
   bootProgress: number;
   projectIndex: number;
   /** Local progress through this scene. Camera progress remains separate. */
   sceneProgress?: number;
   headerVisible?: boolean;
   headerDark?: boolean;
-  legacyHeader?: boolean;
-  heroHeader?: boolean;
   menuOpen?: boolean;
   hovered?: string;
   activeSection?: NavigationSection;
@@ -243,15 +239,9 @@ export function createCanvasUI(width: number, height: number) {
   }
 
   function hero(options: UIOptions, mobile: boolean, scale: number) {
-    const progress = clamp(options.progress);
-    const departure = clamp((progress - 0.12) / 0.5);
     ctx.save();
-    ctx.globalAlpha = 1 - departure * departure * (3 - 2 * departure);
-    // The UI leaves the camera's view while the actual monitor fills that view.
-    // The downstream scene transition is a render-target/camera operation.
-    ctx.translate(-progress * logicalWidth * (mobile ? 0.35 : 0.48), -progress * logicalHeight * 0.28);
-    const magnification = 1 + progress * 0.8;
-    ctx.scale(magnification, magnification);
+    // The scene pipeline owns the camera move and text departure.
+    ctx.globalAlpha = 1;
     ctx.fillStyle = INK;
     ctx.strokeStyle = INK;
     ctx.textBaseline = "alphabetic";
@@ -293,8 +283,7 @@ export function createCanvasUI(width: number, height: number) {
     const w = logicalWidth;
     const h = logicalHeight;
     ctx.save();
-    const departure = clamp((options.sceneProgress ?? 0) / 0.25);
-    ctx.globalAlpha = 1 - departure * departure * (3 - 2 * departure);
+    ctx.globalAlpha = 1;
     ctx.textAlign = "center";
     ctx.fillStyle = INK;
     ctx.strokeStyle = INK;
@@ -343,7 +332,7 @@ export function createCanvasUI(width: number, height: number) {
     ctx.fillStyle = INK;
     const dotSpace = mobile ? 17 : 24;
     for (let index = 0; index < count; index++) {
-      ctx.globalAlpha = (1 - departure * departure * (3 - 2 * departure)) * (index === active ? 1 : 0.35);
+      ctx.globalAlpha = index === active ? 1 : 0.35;
       ctx.beginPath();
       const dotX=w * 0.5 + (index - (count - 1) / 2) * dotSpace;
       const dotY=controlY+(mobile?0:17);

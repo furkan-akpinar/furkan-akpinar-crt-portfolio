@@ -3,7 +3,7 @@
  * so saved navigation targets can resolve to the remaining sections. */
 export type SceneId = "hero" | "projects" | "office" | "about-us" | "golden-tie-reveal" | "golden-tie" | "contact";
 export const SCROLL_SCREENS = 15.1;
-export interface SceneDefinition {
+interface SceneDefinition {
   id: SceneId;
   label: string;
   start: number;

@@ -44,19 +44,19 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
     slot.mesh.rotation.z=entryRoll+roll;
     slot.mesh.position.set(x*Math.cos(entryRoll)-y*Math.sin(entryRoll),x*Math.sin(entryRoll)+y*Math.cos(entryRoll),0);
   }
-  function update(runtime:SceneRuntime,exit:number,entrance=1) {
+  function update(runtime: SceneRuntime, entrance = 1) {
     const count=portfolio.projects.length;
     const incoming=((runtime.projectTarget%count)+count)%count;
     const nextKey=`${w}/${h}/${runtime.projectFrom}/${incoming}`;
     if(nextKey!==key){
-      slots.forEach((slot,i)=>slot.ui.draw({mode:'project-title',progress:0,bootProgress:1,projectIndex:i?incoming:runtime.projectFrom,headerVisible:false}));
+      slots.forEach((slot,i)=>slot.ui.draw({mode:'project-title',bootProgress:1,projectIndex:i?incoming:runtime.projectFrom,headerVisible:false}));
       key=nextKey;
     }
     const t=runtime.reducedMotion?1:runtime.projectMotion;
     // The outgoing caption holds while the incoming panel is still distant,
     // then folds down quickly; ease-out used to erase it before the film moved.
     const departure=Math.pow(THREE.MathUtils.clamp(t/0.48,0,1),3),arrival=ease((t-0.48)/0.52);
-    const visible=(1-THREE.MathUtils.smoothstep(exit,0,0.25))*Math.sqrt(entrance);
+    const visible = Math.sqrt(entrance);
     const previous=slots[0],next=slots[1];
     previous.opacity.value=(1-departure)*visible;
     previous.angle.value=departure*1.35;

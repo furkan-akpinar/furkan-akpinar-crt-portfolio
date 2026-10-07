@@ -26,24 +26,26 @@ export function createProjectImages(width=1536) {
   const sample=sampler.getContext('2d',{willReadFrequently:true});
   function fail(error:Error){
     if(disposed||settled)return;
-    failure=error;diagnostics.error=error.message;settled=true;clearTimeout(timeout);
+    failure=error;diagnostics.error=error.message;settled=true;
     for(const cancel of pendingLoads)cancel();
     rejectReady(error);
   }
-  const timeout=setTimeout(()=>fail(new Error('Proje görselleri yüklenemedi.')),30_000);
   function load(index:number) {
     const project=portfolio.projects[index];
     const canvas=canvases[index],map=textures[index];
     const context=canvas.getContext('2d')!;
     return new Promise<void>((resolve,reject)=>{
     const image=new Image();
+    let finished=false;
     const release=()=>{
+      finished=true;clearTimeout(timeout);
       image.onload=null;image.onerror=null;image.removeAttribute('src');
       pendingLoads.delete(cancel);
     };
-    const cancel=()=>{release();resolve();};
+    const cancel=()=>{if(finished)return;release();resolve();};
     pendingLoads.add(cancel);
     image.onload=()=>{
+      if(finished)return;
       if(disposed||failure){cancel();return;}
       try {
         const fit=projectImagePlacement(image.naturalWidth,image.naturalHeight,project.cropRight,width,height);
@@ -61,12 +63,18 @@ export function createProjectImages(width=1536) {
         release();resolve();
       }catch(error){release();reject(error);}
     };
-    image.onerror=()=>{release();reject(new Error(`Proje görseli yüklenemedi: ${project.image}`));};
+    image.onerror=()=>{if(finished)return;release();reject(new Error(`Proje görseli yüklenemedi: ${project.image}`));};
+    // Each active request gets the full allowance; waiting for a worker does not
+    // spend the later screenshots' budget while the computer textures download.
+    const timeout=setTimeout(()=>{
+      if(finished)return;
+      release();reject(new Error(`Proje görseli zaman aşımına uğradı: ${project.image}`));
+    },30_000);
     image.src=project.image;
     });
   }
   function dispose(){
-    if(disposed)return;disposed=true;clearTimeout(timeout);
+    if(disposed)return;disposed=true;
     for(const cancel of pendingLoads)cancel();
     if(!settled){settled=true;resolveReady();}
     for(const texture of textures)texture.dispose();
@@ -90,7 +98,7 @@ export function createProjectImages(width=1536) {
     while(next<portfolio.projects.length&&!disposed&&!failure)await load(next++);
   }
   void Promise.all([worker(),worker()]).then(()=>{
-    if(!settled){settled=true;clearTimeout(timeout);resolveReady();}
+    if(!settled){settled=true;resolveReady();}
   }).catch(error=>fail(error instanceof Error?error:new Error(String(error))));
   return {
     textures,averageColors,ready,diagnostics,

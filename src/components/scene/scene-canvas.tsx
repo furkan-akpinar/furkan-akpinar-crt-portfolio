@@ -10,7 +10,7 @@ import type { SceneCanvasProps } from './types';
 
 type PipelineType = ReturnType<typeof createScenePipeline>;
 type SceneLifecycle = ReturnType<typeof createSceneLifecycle>;
-function Pipeline({ runtime, onStatus, onPaperActionBounds, lifecycle }: Pick<SceneCanvasProps, 'runtime' | 'onStatus' | 'onPaperActionBounds'> & { lifecycle: SceneLifecycle }) {
+function Pipeline({ runtime, onStatus, lifecycle }: SceneCanvasProps & { lifecycle: SceneLifecycle }) {
   const { gl, size } = useThree();
   const pipeline = useRef<PipelineType | null>(null);
   const announced = useRef(false);
@@ -26,7 +26,6 @@ function Pipeline({ runtime, onStatus, onPaperActionBounds, lifecycle }: Pick<Sc
       pipeline.current = null;
       if (debugWindow.__sceneDiagnostics === current.diagnostics) delete debugWindow.__sceneDiagnostics;
       try { current.dispose(); } catch (error) { console.warn('Scene cleanup failed:', error); }
-      onPaperActionBounds(null);
     };
     // Resize is handled separately without rebuilding GPU resources.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -35,7 +34,6 @@ function Pipeline({ runtime, onStatus, onPaperActionBounds, lifecycle }: Pick<Sc
   useFrame((_, delta) => {
     lifecycle.run(() => {
       pipeline.current?.render(runtime.current,delta);
-      onPaperActionBounds(pipeline.current?.paperActionBounds ?? null);
       if(pipeline.current?.isReady && !announced.current) {
         const renderer = gl as unknown as THREE.WebGPURenderer;
         const backend=renderer.backend as {isWebGPUBackend?:boolean};
@@ -46,7 +44,7 @@ function Pipeline({ runtime, onStatus, onPaperActionBounds, lifecycle }: Pick<Sc
   return null;
 }
 
-export default function SceneCanvas({ onStatus, runtime, onPaperActionBounds }: SceneCanvasProps) {
+export default function SceneCanvas({ onStatus, runtime }: SceneCanvasProps) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element=host.current;
@@ -110,7 +108,7 @@ export default function SceneCanvas({ onStatus, runtime, onPaperActionBounds }: 
           size:initialSize,dpr:[1,1.5],frameloop:'never',
         });
         if(!lifecycle.active) return;
-        const store=root.render(<Pipeline runtime={runtime} onStatus={onStatus} onPaperActionBounds={onPaperActionBounds} lifecycle={lifecycle}/>);
+        const store=root.render(<Pipeline runtime={runtime} onStatus={onStatus} lifecycle={lifecycle}/>);
         if(!lifecycle.active) return;
         // GSAP already owns Lenis and the timelines. Fiber's manual clock uses seconds.
         renderTick=(time:number)=>{ lifecycle.run(() => store.getState().advance(time,true)); };
@@ -125,6 +123,6 @@ export default function SceneCanvas({ onStatus, runtime, onPaperActionBounds }: 
     }
     void init();
     return stop;
-  },[onStatus,runtime,onPaperActionBounds]);
+  },[onStatus,runtime]);
   return <div ref={host} className="scene-canvas" data-testid="scene-canvas"/>;
 }

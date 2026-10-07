@@ -4,7 +4,7 @@ import type { SceneId } from "@/config/scenes";
 import type { SceneRuntime } from "./runtime";
 import { createCanvasUI } from "./canvas-ui";
 import { createPaperUI } from "./paper-ui";
-import { paperScrollOffset, type CanvasActionBounds } from "./paper-action";
+import { paperScrollOffset } from "./paper-action";
 import { curlFrame, curlVertex } from "./page-curl-geometry";
 import { ABOUT_CURL_START, sampleCurlProgress } from "@/lib/about-curl";
 import { createResourceScope } from "./resource-scope";
@@ -25,7 +25,6 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   const sourceTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
   const nextTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
   const paper = own(createPaperUI(w, h));
-  const paperActionBounds: CanvasActionBounds | null = null;
   let lastCurl = -1;
   const ids: LaterId[] = ["contact"];
   const ui = Object.fromEntries(ids.map(id => [id, own(createCanvasUI(w, h))])) as Record<LaterId, ReturnType<typeof createCanvasUI>>;
@@ -50,7 +49,7 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   function drawUI(id: LaterId, progress: number, runtime: SceneRuntime) {
     const key = `${w}/${h}/${Math.round(progress * 500)}/${runtime.projectIndex}/${runtime.reducedMotion}`;
     if (uiKeys.get(id) !== key) {
-      ui[id].draw({ mode: id, sceneProgress: progress, progress: 0, bootProgress: 1, projectIndex: runtime.projectIndex, headerVisible: false });
+      ui[id].draw({ mode: id, sceneProgress: progress, bootProgress: 1, projectIndex: runtime.projectIndex, headerVisible: false });
       uiKeys.set(id, key);
     }
     renderer.autoClear = false; renderer.render(uiScenes[id], uiCamera);
@@ -84,7 +83,7 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
 
   function renderPaper(scroll: number, target: THREE.RenderTarget) {
     const visible = Math.min(1, h / Math.max(h, paper.height));
-    const offset = paperScrollOffset(paper.height, h, scroll, paper.entryOffset);
+    const offset = paperScrollOffset(paper.height, h, scroll);
     paperWindow.value.set(visible, (Math.max(0, paper.height - h) - offset) / Math.max(h, paper.height));
     renderer.setRenderTarget(target); renderer.autoClear = true; renderer.render(paperScene, uiCamera);
     diagnostics.passes.push("about-paper");
@@ -127,7 +126,7 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   }
   resize(w, h);
   const ready = Promise.all([paper.ready]).then(() => undefined);
-  return { render, resize, ready, diagnostics, get paperActionBounds() { return paperActionBounds; }, dispose() {
+  return { render, resize, ready, diagnostics, dispose() {
     if (disposed) return; disposed = true;
     scope.dispose();
     for (const scene of [curlScene, paperScene, blueBackground, ...Object.values(uiScenes)]) scene.clear();

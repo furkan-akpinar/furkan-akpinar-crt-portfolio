@@ -194,17 +194,14 @@ export function filmAngleAtDistance(distance: number) {
 /**
  * Fixed-size slots follow the approved S; project ownership wraps offscreen.
  * Call update from the existing scene clock; media playback belongs to the gallery.
- * Supplied gallery/portal textures remain owned by their render-target producers.
+ * Supplied textures remain owned by the gallery.
  */
-export function createProjectRing(textures: readonly THREE.Texture[], officeTexture?: THREE.Texture) {
+export function createProjectRing(textures: readonly THREE.Texture[]) {
   if (textures.length < 1) throw new Error('A project ring needs at least one project texture.');
   const count = textures.length;
   const step = TAU / CALIBRATION_PANELS;
   const initialEntryStartIndex = ringPosition(8, CALIBRATION_PANELS);
   const arcReveal = uniform(CALIBRATION_PANELS + 1);
-  const portalMix = uniform(0);
-  const portalScale = uniform(new THREE.Vector2(1, 1));
-  const flatten = uniform(0);
   const sortPoint = new THREE.Vector3();
   const group = new THREE.Group();
   group.name = 'uniform-s-project-film';
@@ -219,7 +216,6 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
   const revealOrders = Array.from({ length: slotCount }, () => uniform(0));
   const materials: THREE.MeshBasicNodeMaterial[] = [];
   const mediaNodes: ReturnType<typeof texture>[] = [];
-  const portalWeights = Array.from({ length: slotCount }, () => uniform(0));
   const mediaIndices = [count - 1, 0, count > 1 ? 1 : 0];
   const frontSine = Math.sin(step * 0.5);
   const frontWidth = PROJECT_RING.radiusX * 2 * frontSine * (1 + PROJECT_RING.sideExpansion * frontSine * frontSine);
@@ -245,8 +241,6 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
     };
     const path = samplePath(centers[index].add(positionLocal.x.mul(filmPitch)));
     const curved = path.xyz.add(vec3(0, positionLocal.y, 0));
-    const flatX = positionLocal.x.mul(frontWidth);
-    const flat = vec3(flatX, positionLocal.y.add(flatX.mul(layout.slope)), 0);
 
     const coordinates = uv();
     // Reveal stays on the calibrated physical path, independent of media repeats.
@@ -268,12 +262,6 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
     const mediaTexture = texture(textures[index % count], mediaUV);
     mediaTexture.updateMatrix = true;
     mediaNodes.push(mediaTexture);
-    let media = mediaTexture.rgb;
-    const portalWeight = portalWeights[index];
-    if (officeTexture) {
-      const officeUV = coordinates.flipY().sub(0.5).mul(portalScale).add(0.5);
-      media = mix(media, texture(officeTexture, officeUV).rgb, portalWeight);
-    }
     const fragmentAngle = samplePath(centers[index].add(coordinates.x.sub(0.5).mul(filmPitch))).w;
     const frontFacing = cos(fragmentAngle).smoothstep(-0.1, 0.8);
     const frontLight = frontFacing.mul(0.65).add(0.35);
@@ -292,9 +280,9 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
       forceSinglePass: true, alphaTest: 0.001,
     });
     material.name = `project-film-${index}`;
-    material.positionNode = mix(curved, flat, flatten.mul(portalWeight));
-    material.colorNode = mix(filmColor, media.mul(mix(frontLight, float(1), portalWeight)), mix(picture, float(1), portalWeight));
-    material.opacityNode = mix(holes.oneMinus().mul(arcVisible).mul(filmOpacity).mul(pathOpacity), float(1), portalWeight);
+    material.positionNode = curved;
+    material.colorNode = mix(filmColor, mediaTexture.rgb.mul(frontLight), picture);
+    material.opacityNode = holes.oneMinus().mul(arcVisible).mul(filmOpacity).mul(pathOpacity);
     material.toneMapped = false;
     materials.push(material);
     const panel = new THREE.Mesh(shape, material);
@@ -309,7 +297,7 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
     group.add(panel);
   }
 
-  function update(position: number, exit = 0, mobile = false, visiblePanels: number = CALIBRATION_PANELS, entryStartIndex = 8, aspect = 1918 / 1078) {
+  function update(position: number, mobile = false, visiblePanels: number = CALIBRATION_PANELS, entryStartIndex = 8, aspect = 1918 / 1078) {
     if (disposed || !Number.isFinite(position)) return;
     const wrapped = ringPosition(position, count);
     const activeIndex = ringProjectIndex(position, count);
@@ -330,9 +318,6 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
     const desktopPullback = Math.max(0, referenceAspect / Math.max(1, aspect) - 1) * 5.4;
     const widePushIn = Math.min(0.2, Math.max(0, aspect - referenceAspect) * 0.9);
     layout.cameraDistance = mobile ? PROJECT_RING.mobileCameraDistance : PROJECT_RING.cameraDistance + desktopPullback - widePushIn;
-    const portal = THREE.MathUtils.clamp(exit * 3, 0, 1);
-    portalMix.value = portal * portal * (3 - 2 * portal);
-    flatten.value = THREE.MathUtils.smoothstep(exit, 0, 0.7);
     if (activeIndex !== previousIndex) {
       mediaIndices[0] = ringPosition(activeIndex - 1, count);
       mediaIndices[1] = activeIndex;
@@ -356,7 +341,6 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
       const order = ringPosition(logicalIndex - startIndex, CALIBRATION_PANELS);
       revealOrders[index].value = order;
       panel.userData.entryArcOrder = order;
-      portalWeights[index].value = logicalIndex === Math.round(position) ? portalMix.value : 0;
       panel.visible = distance + filmPitch * 0.5 > PROJECT_FILM.visibleStartDistance
         && distance - filmPitch * 0.5 < PROJECT_FILM.maxDistance;
       if (panel.visible) drawCalls++;
@@ -372,7 +356,7 @@ export function createProjectRing(textures: readonly THREE.Texture[], officeText
 
   update(0);
   return {
-    group, layout, mediaIndices, diagnostics, portalMix, portalScale,
+    group, layout, mediaIndices, diagnostics,
     get activeIndex() { return diagnostics.activeIndex; },
     update,
     dispose() {

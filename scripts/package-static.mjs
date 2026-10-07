@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +19,23 @@ const assets = [
   'textures/no-signal-label.png',
 ];
 
+function copyReleaseAsset(source, destination) {
+  // Avoid Node 22.18's Windows fs.cpSync crash on non-ASCII source paths.
+  // Copy regular file bytes only; reject links before following any directory.
+  const entry = lstatSync(source);
+  assert.ok(!entry.isSymbolicLink(), 'Release assets must be regular files.');
+  if (entry.isDirectory()) {
+    mkdirSync(destination, { recursive: true });
+    for (const name of readdirSync(source)) {
+      copyReleaseAsset(path.join(source, name), path.join(destination, name));
+    }
+  } else {
+    assert.ok(entry.isFile(), 'Release assets must be regular files.');
+    mkdirSync(path.dirname(destination), { recursive: true });
+    copyFileSync(source, destination);
+  }
+}
+
 assert.ok(existsSync(path.join(exported, 'index.html')), 'Run next build before packaging.');
 assert.equal(path.dirname(output), root, 'Output must remain in the project.');
 if (existsSync(output)) {
@@ -35,12 +52,12 @@ writeFileSync(path.join(output, marker), JSON.stringify({ owner: 'furkan-portfol
 // separately, then copy only the assets used by the released application.
 const publicNames = new Set(readdirSync(path.join(root, 'public')));
 for (const entry of readdirSync(exported)) {
-  if (!publicNames.has(entry)) cpSync(path.join(exported, entry), path.join(output, entry), { recursive: true });
+  if (!publicNames.has(entry)) copyReleaseAsset(path.join(exported, entry), path.join(output, entry));
 }
 for (const relative of assets) {
   const source = path.join(root, 'public', relative);
   assert.ok(existsSync(source), `Missing release asset: ${relative}`);
-  cpSync(source, path.join(output, relative), { recursive: true });
+  copyReleaseAsset(source, path.join(output, relative));
 }
 
 function inventory(directory) {

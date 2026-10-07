@@ -43,7 +43,6 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     mobileUserAgent: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
   });
   const time = uniform(0);
-  const travel = uniform(0);
   const paperColorEnabled = uniform(0);
   const aboutCRT = uniform(0);
   const aboutCurvature = uniform(0.1);
@@ -307,7 +306,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     mainUI.resize(w,h); projectsUI.resize(w,h); bootUI.resize(w,h); navigationUI.resize(w,h);
     heroWave.resize(w,h);heroText.geometry=heroWave.geometry;
     aboutNavigationUI.resize(w,h);
-    aboutNavigationUI.draw({mode:'header',progress:0,bootProgress:1,projectIndex:0,headerDark:true,legacyHeader:true,heroHeader:false});
+    aboutNavigationUI.draw({mode:'header',bootProgress:1,projectIndex:0,headerDark:true});
     later.resize(w,h);projectTitle.resize(w,h);key.shadow.needsUpdate=true;
     camera.aspect = projectCamera.aspect = w/h;
     camera.updateProjectionMatrix(); projectCamera.updateProjectionMatrix();
@@ -332,7 +331,6 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     const state = getSceneState(runtime.progress);
     const p = heroTravel(runtime.progress);
     sampleProjectEntry(p,runtime.reducedMotion,entry);
-    travel.value = p;
     const mobile = w < 900;
     const laterScene = state.scene.id !== 'hero' && state.scene.id !== 'projects';
     firstSceneCRT.value=laterScene?0:smooth((entry.camera-0.9)/0.1);
@@ -341,9 +339,9 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     screenBlend.value=smooth((p-0.02)/0.25);
     const exit = state.scene.id==='projects'?sampleProjectAbout(runtime.progress):0;
     aperture.update(exit,w,h,runtime.time,runtime.reducedMotion);
-    projectTitle.update(runtime,0,entry.caption);
+    projectTitle.update(runtime, entry.caption);
     const entryStart=Math.round(runtime.projectPosition)-3;
-    ring.update(runtime.projectPosition+entry.turns,0,mobile,entry.visiblePanels,entryStart,w/h);
+    ring.update(runtime.projectPosition + entry.turns, mobile, entry.visiblePanels, entryStart, w / h);
     for(let i=0;i<entryMediaIndices.length;i++)entryMediaIndices[i]=((entryStart+i)%gallery.textures.length+gallery.textures.length)%gallery.textures.length;
     ring.group.position.x=entry.offsetX*(mobile?0.45:1);
     ring.group.position.y+=entry.offsetY;
@@ -351,7 +349,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     (projectUI.children[0] as THREE.Mesh<THREE.PlaneGeometry,THREE.MeshBasicNodeMaterial>).material.opacity=entry.caption;
     const projectKey = `${w}/${h}/${runtime.projectIndex}`;
     if (projectKey !== lastProjectKey) {
-      projectsUI.draw({mode:'projects',progress:0,sceneProgress:0,bootProgress:1,projectIndex:runtime.projectIndex,headerVisible:false});
+      projectsUI.draw({mode:'projects',bootProgress:1,projectIndex:runtime.projectIndex,headerVisible:false});
       lastProjectKey = projectKey;
     }
     // No extra timer or per-frame texture upload: repaint only on a 450 ms beat
@@ -361,7 +359,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       const promptCount = heroPromptCount(performance.now() / 1000, runtime.reducedMotion);
       const uiKey = `${w}/${h}/${promptCount}`;
       if (uiKey !== lastUIKey) {
-        mainUI.draw({mode:'hero',progress:0,bootProgress:1,projectIndex:runtime.projectIndex,headerVisible:false,heroPromptCount:promptCount});
+        mainUI.draw({mode:'hero',bootProgress:1,projectIndex:runtime.projectIndex,headerVisible:false,heroPromptCount:promptCount});
         lastUIKey = uiKey;
         diagnostics.heroPrompt.count = promptCount;
       }
@@ -373,22 +371,21 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     aboutCRT.value*=1-bootMix.value;
     const activeSection=navigationSection(state.scene.id);
     const darkHeader=state.scene.id==='about-us';
-    const heroHeader=state.scene.id==='hero';
-    const navigationKey=`${w}/${h}/${activeSection}/${Math.round((paperCurl??0)*1000)}/${darkHeader}/${laterScene}/${heroHeader}/${runtime.menuOpen}/${runtime.hovered}`;
+    const navigationKey=`${w}/${h}/${activeSection}/${Math.round((paperCurl??0)*1000)}/${darkHeader}/${laterScene}/${runtime.menuOpen}/${runtime.hovered}`;
     if(navigationKey!==lastNavigationKey) {
-      navigationUI.draw({mode:'header',progress:0,bootProgress:1,projectIndex:runtime.projectIndex,headerDark:darkHeader,legacyHeader:laterScene,heroHeader,menuOpen:runtime.menuOpen,hovered:runtime.hovered,activeSection,paperCurl:runtime.reducedMotion&&paperCurl!==undefined?(paperCurl<.5?0:1):paperCurl});
+      navigationUI.draw({mode:'header',bootProgress:1,projectIndex:runtime.projectIndex,headerDark:darkHeader,menuOpen:runtime.menuOpen,hovered:runtime.hovered,activeSection,paperCurl:runtime.reducedMotion&&paperCurl!==undefined?(paperCurl<.5?0:1):paperCurl});
       lastNavigationKey=navigationKey;
     }
     if(exit>0) {
       const aboutNavigationKey=`${w}/${h}/${runtime.menuOpen}/${runtime.hovered}`;
       if(aboutNavigationKey!==lastAboutNavigationKey) {
-        aboutNavigationUI.draw({mode:'header',progress:0,bootProgress:1,projectIndex:runtime.projectIndex,headerDark:true,legacyHeader:true,heroHeader:false,menuOpen:runtime.menuOpen,hovered:runtime.hovered,activeSection:'about-us'});
+        aboutNavigationUI.draw({mode:'header',bootProgress:1,projectIndex:runtime.projectIndex,headerDark:true,menuOpen:runtime.menuOpen,hovered:runtime.hovered,activeSection:'about-us'});
         lastAboutNavigationKey=aboutNavigationKey;
       }
     }
     const bootStep = Math.round(runtime.bootProgress*24);
     if(bootStep !== lastBoot && runtime.intro < 1) {
-      bootUI.draw({mode:'boot',progress:0,bootProgress:runtime.bootProgress,projectIndex:0}); lastBoot = bootStep;
+      bootUI.draw({mode:'boot',bootProgress:runtime.bootProgress,projectIndex:0}); lastBoot = bootStep;
     }
     const parallax = runtime.reducedMotion ? 0 : (1-smooth(p))*smooth(runtime.intro);
     pointer.lerp(pointerTarget.set(runtime.pointerX,runtime.pointerY),1-Math.exp(-Math.min(delta,0.1)*9));
@@ -511,8 +508,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   }
   const copyMaterial = own(new THREE.MeshBasicNodeMaterial({ map: projectsTarget.texture }));
   const screenCopy = own(new THREE.QuadMesh(copyMaterial));
-  return { render, resize, diagnostics, get isReady(){return assetsReady&&warmupFinished;},
-    get paperActionBounds(){return diagnostics.scene === 'about-us' ? later.paperActionBounds : null;}, dispose() {
+  return { render, resize, diagnostics, get isReady(){return assetsReady&&warmupFinished;}, dispose() {
     resources.dispose();
     hero.clear(); projects.clear();
   }};

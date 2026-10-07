@@ -143,7 +143,6 @@ export function createHeroReel() {
 
   return {
     texture, video, ready, cellColors, averageColor, diagnostics, update,
-    get luminance() { return diagnostics.luminance; },
     dispose() {
       if (disposed) return;
       disposed = true;
