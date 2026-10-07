@@ -1,4 +1,4 @@
-import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS, PROJECT_ABOUT_TOUCH_DISTANCE_VH, PROJECT_ABOUT_TOUCH_DURATION } from './project-about-transition.ts';
+import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS, PROJECT_ABOUT_TOUCH_DURATION } from './project-about-transition.ts';
 import { ABOUT_CURL_START_VH, ABOUT_CURL_END_VH, ABOUT_CURL_DURATION, nextCurlTargetVh } from '../../lib/about-curl.ts';
 
 /** Input arbitration: the caller owns scrolling, gallery changes, and navigation.
@@ -62,18 +62,16 @@ export interface IntroGestureState {
   latch: Latch | null;
   apertureTargetVh: number | null;
   curlTargetVh: number | null;
-  scrubbingAperture: boolean;
 }
 
 export type IntroGestureAction = { type: 'pass' } | { type: 'block' }
   | { type: 'snap'; top: number; duration: number }
-  | { type: 'scrub'; top: number }
   | { type: 'aperture'; top: number; duration: number }
   | { type: 'curl'; top: number; duration: number }
   | { type: 'gallery'; direction: Direction };
 
 export function createIntroGestureState(): IntroGestureState {
-  return { lastEventTime: -Infinity, axis: null, direction: null, accumulated: 0, latch: null, apertureTargetVh: null, curlTargetVh: null, scrubbingAperture: false };
+  return { lastEventTime: -Infinity, axis: null, direction: null, accumulated: 0, latch: null, apertureTargetVh: null, curlTargetVh: null };
 }
 
 export function reduceIntroGesture(
@@ -122,31 +120,19 @@ export function reduceIntroGesture(
 
   const apertureStart = Math.floor(PROJECT_ABOUT_START_VH * input.viewportHeight);
   const apertureEnd = Math.ceil(PROJECT_ABOUT_END_VH * input.viewportHeight) + 2;
-  if (input.touch && axis === 'y' && direction > 0 && !state.scrubbingAperture
-    && vh >= config.projectsStartVh && input.scroll < apertureEnd) {
-    if (state.accumulated < config.triggerPx) return { state, action: { type: 'block' } };
-    // Reuse the existing locked scroll journey. Its finger stays consumed until
-    // release, so the same swipe cannot skip into About after the reveal ends.
-    state.accumulated = 0;
-    state.apertureTargetVh = state.curlTargetVh = null;
-    state.latch = { type: 'snap', targetVh: apertureEnd / input.viewportHeight,
-      startedAt: input.time, durationMs: PROJECT_ABOUT_TOUCH_DURATION * 1000 };
-    return { state, action: { type: 'snap', top: apertureEnd, duration: PROJECT_ABOUT_TOUCH_DURATION } };
-  }
-  const startsTouchScrub = direction > 0
+  const enteringTouchAperture = direction > 0
     ? vh >= config.projectsStartVh && input.scroll < apertureEnd
     : input.scroll > apertureStart + config.settleTolerancePx && input.scroll + input.deltaY <= apertureEnd;
-  if (input.touch && axis === 'y' && (state.scrubbingAperture || startsTouchScrub)) {
-    // Retain this drag's ownership at both endpoints. Reversing the held finger
-    // scrubs back; only a fresh touch can leave for Hero or scroll through About.
-    state.scrubbingAperture = true;
+  if (input.touch && axis === 'y' && enteringTouchAperture) {
+    if (state.accumulated < config.triggerPx) return { state, action: { type: 'block' } };
+    // Reuse the existing locked scroll journey. Its finger stays consumed until
+    // release, so the same swipe cannot continue into About or skip to Hero.
+    const top = direction > 0 ? apertureEnd : apertureStart;
     state.accumulated = 0;
     state.apertureTargetVh = state.curlTargetVh = null;
-    const basis = Math.max(apertureStart, Math.min(apertureEnd, input.scroll));
-    // When arriving from About, consume its outside distance at the normal rate.
-    const delta = input.deltaY + Math.max(0, input.scroll - apertureEnd);
-    const gain = (apertureEnd - apertureStart) / (PROJECT_ABOUT_TOUCH_DISTANCE_VH * input.viewportHeight);
-    return { state, action: { type: 'scrub', top: Math.max(apertureStart, Math.min(apertureEnd, basis + delta * gain)) } };
+    state.latch = { type: 'snap', targetVh: top / input.viewportHeight,
+      startedAt: input.time, durationMs: PROJECT_ABOUT_TOUCH_DURATION * 1000 };
+    return { state, action: { type: 'snap', top, duration: PROJECT_ABOUT_TOUCH_DURATION } };
   }
 
   const entering = axis === 'y' && direction > 0 && vh < config.heroMaxVh;

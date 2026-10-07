@@ -75,11 +75,6 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
       if (result.action.type === 'pass') return true;
 
       event.preventDefault();
-      if (result.action.type === 'scrub') {
-        // Direct finger movement has no tween or release momentum. Returning
-        // false also clears the mobile driver's velocity for this input.
-        driver?.scrollTo(result.action.top, { immediate: true, force: true });
-      }
       if (result.action.type === 'gallery') {
         window.dispatchEvent(new CustomEvent('study-project', { detail: result.action.direction }));
       }

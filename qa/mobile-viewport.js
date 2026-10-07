@@ -188,20 +188,20 @@ async page => {
       const fingerTravel = stop.name === 'aperture' ? 60 : 160;
       await swipe(650, 650 - fingerTravel);
       const forward = await snapshot();
-      const apertureGain = (Math.ceil(5.6 * before.storyHeight) + 2 - Math.floor(1.42 * before.storyHeight)) / (0.75 * before.storyHeight);
       const aboutStart = Math.ceil(5.6 * before.storyHeight) + 2;
+      const projectsStart = Math.floor(1.42 * before.storyHeight);
       check(`${stop.name}: forward controlled swipe`, forward.scrollPosition > before.scrollPosition + 20
         && (stop.name === 'aperture'
           ? forward.scene === 'about-us' && Math.abs(forward.scrollPosition - aboutStart) <= 2
           : forward.scene === stop.scene), { before, forward, fingerTravel });
-      // A fresh forward gesture auto-completes the aperture; a fresh reverse
-      // gesture remains a proportional scrub from the selected partial pose.
+      // A fresh gesture in either direction completes the original aperture
+      // automatically and stops at the chosen section's resting pose.
       const reverseBefore = await hold(stop.vh);
       await swipe(650 - fingerTravel, 650);
       const reverse = await snapshot();
       check(`${stop.name}: reverse controlled swipe`, reverse.scrollPosition < reverseBefore.scrollPosition - 20 && reverse.scene === stop.scene
-        && (stop.name !== 'aperture' || (reverse.projectExit < reverseBefore.projectExit
-          && Math.abs(reverse.scrollPosition - reverseBefore.scrollPosition + fingerTravel * apertureGain) <= 2)),
+        && (stop.name !== 'aperture' || (reverse.projectExit === 0
+          && Math.abs(reverse.scrollPosition - projectsStart) <= 2)),
       { before, reverseBefore, reverse, fingerTravel });
     }
     await hold(0);
