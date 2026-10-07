@@ -7,6 +7,8 @@ export const PROJECT_ABOUT_END_VH = 5.6;
 export const PROJECT_ABOUT_STEPS = 7;
 /** Viewport fraction of finger travel for a full reveal; larger values feel slower. */
 export const PROJECT_ABOUT_TOUCH_DISTANCE_VH = .75;
+/** A mobile upward swipe plays the existing reveal at an unhurried pace. */
+export const PROJECT_ABOUT_TOUCH_DURATION = 2;
 export const PROJECT_ABOUT_REST_TOLERANCE_VH = .002;
 
 /** Absolute scroll sampling makes a stopped or reversed aperture deterministic. */

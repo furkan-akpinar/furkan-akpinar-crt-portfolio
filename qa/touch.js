@@ -6,12 +6,15 @@ async page => {
     ...['projects', 'about-us', 'contact', 'hero'].map(scene => `touch menu ${scene}`),
     'controlled touch swipe enters projects', 'one horizontal gesture advances exactly one project', 'one reverse horizontal gesture returns exactly one project',
     'horizontal gestures preserve the story position',
-    'short touch drag advances only part of the aperture', 'stationary finger leaves the aperture stationary',
-    'released partial aperture stays stationary beyond 1.4 seconds', 'fresh touch resumes the partial aperture',
-    'quickly released partial aperture has no momentum',
-    'equal reverse finger travel restores the partial aperture', 'one continuous drag completes the aperture',
-    'held forward finger is bounded to the About endpoint', 'held finger reverses from the About endpoint',
-    'equal forward finger travel restores the About endpoint', 'released completed aperture stays stationary',
+    'sub-threshold touch does not start the aperture', 'short forward swipe starts a gradual automatic aperture',
+    'released forward aperture continues automatically', 'new touch during automatic aperture cannot interrupt it',
+    'automatic aperture completes in approximately two seconds', 'held touch cannot restart the automatic aperture',
+    'held forward finger is bounded to the About endpoint', 'held reverse finger after automatic completion stays consumed',
+    'released completed aperture stays stationary', 'short reverse drag advances only part of the aperture',
+    'stationary reverse finger leaves the aperture stationary', 'released reverse aperture stays stationary beyond 1.4 seconds',
+    'fresh reverse touch resumes the partial aperture', 'quickly released reverse aperture has no momentum',
+    'equal held forward finger travel restores the reverse starting point', 'held forward retrace stays manual after release',
+    'fresh forward touch automatically completes a partial aperture',
     'one continuous reverse drag reaches Projects without entering Hero', 'held finger reverses from the Projects endpoint',
     'fresh touch swipe resumes About scrolling', 'About release momentum cannot enter the aperture',
     'aperture gesture keeps the root locked and canvas stable',
@@ -123,8 +126,8 @@ async page => {
     check('horizontal gestures preserve the story position', [horizontalAfter, horizontalSettled, horizontalReverse].every(state => state.scene === 'projects'
       && Math.abs(state.scrollPosition - horizontalBefore.scrollPosition) <= 2), { horizontalBefore, horizontalAfter, horizontalSettled, horizontalReverse });
 
-    // Movement is proportional to finger travel. Neither a stationary finger nor
-    // a release may start an automatic continuation, even beyond the old 1.4s snap.
+    // A short fresh forward gesture owns one timed reveal. It must keep
+    // progressing after release without accepting further gestures mid-flight.
     const apertureBefore = await hold(1.42);
     const touchDown = async y => {
       await emulation.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 220, y }] });
@@ -143,59 +146,63 @@ async page => {
       && a.scene === b.scene && Math.abs(a.projectExit - b.projectExit) < 0.001;
     const apertureStart = Math.floor(1.42 * apertureBefore.storyHeight);
     const aboutStart = Math.ceil(5.6 * apertureBefore.storyHeight) + 2;
-    const apertureSamples = [];
-    await touchDown(760);
-    const partial = await touchMove(700);
-    check('short touch drag advances only part of the aperture', partial.scene === 'projects'
-      && partial.scrollPosition > apertureBefore.scrollPosition + 300 && partial.scrollPosition < aboutStart - 2
-      && partial.projectExit > 0 && partial.projectExit < 1, { apertureBefore, partial });
-    await mobile.waitForTimeout(1700);
-    const heldPartial = await snapshot();
-    check('stationary finger leaves the aperture stationary', stationary(partial, heldPartial), { partial, heldPartial });
-    await touchUp();
-    await mobile.waitForTimeout(1700);
-    const releasedPartial = await snapshot();
-    check('released partial aperture stays stationary beyond 1.4 seconds', stationary(partial, releasedPartial), { partial, releasedPartial });
-    await touchDown(760);
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 700 }] });
-    await touchUp();
-    await mobile.waitForTimeout(80);
-    const resumed = await snapshot();
-    check('fresh touch resumes the partial aperture', resumed.scene === 'projects'
-      && resumed.scrollPosition > releasedPartial.scrollPosition + 300 && resumed.scrollPosition < aboutStart - 2,
-    { releasedPartial, resumed });
-    await mobile.waitForTimeout(1700);
-    const releasedResume = await snapshot();
-    const expectedResumed = releasedPartial.scrollPosition + 60 * (aboutStart - apertureStart) / (0.75 * apertureBefore.storyHeight);
-    check('quickly released partial aperture has no momentum', Math.abs(resumed.scrollPosition - expectedResumed) <= 2
-      && stationary(resumed, releasedResume), { resumed, releasedResume, expectedResumed });
-    await touchDown(700);
-    const restoredPartial = await touchMove(760);
-    check('equal reverse finger travel restores the partial aperture', stationary(partial, restoredPartial), { partial, resumed, restoredPartial });
-    await touchUp();
-    apertureSamples.push(partial, heldPartial, releasedPartial, resumed, releasedResume, restoredPartial);
-
-    await hold(1.42);
-    await touchDown(800);
     const fullTravel = 0.75 * apertureBefore.storyHeight + 1;
-    for (let step = 1; step <= 8; step++) apertureSamples.push(await touchMove(800 - fullTravel * step / 8));
-    const apertureComplete = apertureSamples[apertureSamples.length - 1];
-    check('one continuous drag completes the aperture', apertureComplete.scene === 'about-us'
-      && Math.abs(apertureComplete.scrollPosition - aboutStart) <= 2, { apertureComplete, fullTravel, aboutStart });
-    const completeY = 800 - fullTravel;
-    const boundedAbout = await touchMove(completeY - 60);
-    check('held forward finger is bounded to the About endpoint', stationary(apertureComplete, boundedAbout), { apertureComplete, boundedAbout });
-    const reverseFromAbout = await touchMove(completeY);
-    check('held finger reverses from the About endpoint', reverseFromAbout.scene === 'projects'
-      && reverseFromAbout.scrollPosition < aboutStart - 300 && reverseFromAbout.projectExit > 0 && reverseFromAbout.projectExit < 1,
-    { boundedAbout, reverseFromAbout });
-    const restoredAbout = await touchMove(completeY - 60);
-    check('equal forward finger travel restores the About endpoint', stationary(apertureComplete, restoredAbout), { apertureComplete, reverseFromAbout, restoredAbout });
+    const apertureSamples = [];
+    const waitForAbout = () => mobile.waitForFunction(aboutStart => window.__sceneDiagnostics?.scene === 'about-us'
+      && Math.abs(window.__sceneDiagnostics.scrollPosition - aboutStart) <= 2, aboutStart, { timeout: 5000 });
+    await touchDown(760);
+    const belowThreshold = await touchMove(754);
+    check('sub-threshold touch does not start the aperture', stationary(apertureBefore, belowThreshold), { apertureBefore, belowThreshold });
+    const autoStart = await snapshot();
+    const autoEarly = await touchMove(730);
     await touchUp();
-    await mobile.waitForTimeout(1700);
+    check('short forward swipe starts a gradual automatic aperture', autoEarly.scene === 'projects'
+      && autoEarly.scrollPosition >= apertureBefore.scrollPosition && autoEarly.scrollPosition < aboutStart - 300,
+    { autoStart, autoEarly, aboutStart });
+    await mobile.waitForTimeout(800);
+    const autoReleased = await snapshot();
+    check('released forward aperture continues automatically', autoReleased.scene === 'projects'
+      && autoReleased.scrollPosition > autoEarly.scrollPosition + 20 && autoReleased.scrollPosition < aboutStart - 20,
+    { autoEarly, autoReleased });
+    await touchDown(500);
+    const autoNewTouch = await touchMove(590);
+    await touchUp();
+    await mobile.waitForTimeout(200);
+    const autoAfterNewTouch = await snapshot();
+    check('new touch during automatic aperture cannot interrupt it', autoNewTouch.scrollPosition >= autoReleased.scrollPosition
+      && autoAfterNewTouch.scrollPosition > autoNewTouch.scrollPosition + 20,
+    { autoReleased, autoNewTouch, autoAfterNewTouch });
+    await waitForAbout();
+    const autoComplete = await snapshot();
+    const autoDuration = autoComplete.time - autoStart.time;
+    check('automatic aperture completes in approximately two seconds', autoDuration >= 1700 && autoDuration < 2700
+      && Math.abs(autoComplete.scrollPosition - aboutStart) <= 2, { autoDuration, autoStart, autoComplete });
+    apertureSamples.push(belowThreshold, autoEarly, autoReleased, autoNewTouch, autoAfterNewTouch, autoComplete);
+
+    // A finger held through completion is consumed in both directions. Its later
+    // movement must not drag About or restart the reveal; only a fresh gesture can.
+    await hold(1.42);
+    await touchDown(760);
+    const heldStart = await snapshot();
+    const heldEarly = await touchMove(730);
+    const heldMoveOne = await touchMove(640);
+    await mobile.waitForTimeout(650);
+    const heldMoveTwo = await touchMove(700);
+    await waitForAbout();
+    const apertureComplete = await snapshot();
+    check('held touch cannot restart the automatic aperture', apertureComplete.time - heldStart.time >= 1700
+      && apertureComplete.time - heldStart.time < 2700 && heldMoveOne.scrollPosition >= heldEarly.scrollPosition
+      && heldMoveTwo.scrollPosition >= heldMoveOne.scrollPosition,
+    { heldStart, heldEarly, heldMoveOne, heldMoveTwo, apertureComplete });
+    const boundedAbout = await touchMove(600);
+    check('held forward finger is bounded to the About endpoint', stationary(apertureComplete, boundedAbout), { apertureComplete, boundedAbout });
+    const consumedReverse = await touchMove(720);
+    check('held reverse finger after automatic completion stays consumed', stationary(apertureComplete, consumedReverse), { apertureComplete, consumedReverse });
+    await touchUp();
+    await mobile.waitForTimeout(250);
     const apertureReleased = await snapshot();
     check('released completed aperture stays stationary', stationary(apertureComplete, apertureReleased), { apertureComplete, apertureReleased });
-    apertureSamples.push(boundedAbout, reverseFromAbout, restoredAbout, apertureReleased);
+    apertureSamples.push(heldEarly, heldMoveOne, heldMoveTwo, apertureComplete, boundedAbout, consumedReverse, apertureReleased);
 
     await swipe({ x: 220, y: 760 }, { x: 220, y: 600 });
     await mobile.waitForTimeout(600);
@@ -203,6 +210,56 @@ async page => {
     check('fresh touch swipe resumes About scrolling', freshAbout.scene === 'about-us'
       && freshAbout.scrollPosition > apertureReleased.scrollPosition + 20, { apertureReleased, freshAbout });
     apertureSamples.push(freshAbout);
+
+    // Reverse traversal keeps direct, reversible .75-viewport finger control.
+    // Once that gesture owns the aperture, an equal held forward move retraces it.
+    await hold(aboutStart / apertureBefore.storyHeight);
+    await touchDown(400);
+    const reversePartial = await touchMove(460);
+    check('short reverse drag advances only part of the aperture', reversePartial.scene === 'projects'
+      && reversePartial.scrollPosition < aboutStart - 300 && reversePartial.scrollPosition > apertureStart + 2
+      && reversePartial.projectExit > 0 && reversePartial.projectExit < 1, { reversePartial, aboutStart });
+    await mobile.waitForTimeout(1700);
+    const heldReverse = await snapshot();
+    check('stationary reverse finger leaves the aperture stationary', stationary(reversePartial, heldReverse), { reversePartial, heldReverse });
+    await touchUp();
+    await mobile.waitForTimeout(1700);
+    const releasedReverse = await snapshot();
+    check('released reverse aperture stays stationary beyond 1.4 seconds', stationary(reversePartial, releasedReverse), { reversePartial, releasedReverse });
+    await touchDown(400);
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 460 }] });
+    await touchUp();
+    await mobile.waitForTimeout(80);
+    const reverseResumed = await snapshot();
+    check('fresh reverse touch resumes the partial aperture', reverseResumed.scene === 'projects'
+      && reverseResumed.scrollPosition < releasedReverse.scrollPosition - 300 && reverseResumed.scrollPosition > apertureStart + 2,
+    { releasedReverse, reverseResumed });
+    await mobile.waitForTimeout(1700);
+    const reverseSettled = await snapshot();
+    const expectedReverse = releasedReverse.scrollPosition - 60 * (aboutStart - apertureStart) / (0.75 * apertureBefore.storyHeight);
+    check('quickly released reverse aperture has no momentum', Math.abs(reverseResumed.scrollPosition - expectedReverse) <= 2
+      && stationary(reverseResumed, reverseSettled), { reverseResumed, reverseSettled, expectedReverse });
+    await touchDown(400);
+    const reverseFurther = await touchMove(460);
+    const retraced = await touchMove(400);
+    check('equal held forward finger travel restores the reverse starting point', stationary(reverseResumed, retraced)
+      && reverseFurther.scrollPosition < reverseResumed.scrollPosition - 300, { reverseResumed, reverseFurther, retraced });
+    await touchUp();
+    await mobile.waitForTimeout(1700);
+    const retracedReleased = await snapshot();
+    check('held forward retrace stays manual after release', stationary(retraced, retracedReleased), { retraced, retracedReleased });
+    await touchDown(760);
+    const partialAutoStart = await snapshot();
+    await touchMove(730);
+    await touchUp();
+    await waitForAbout();
+    const partialAutoComplete = await snapshot();
+    check('fresh forward touch automatically completes a partial aperture', partialAutoComplete.scene === 'about-us'
+      && Math.abs(partialAutoComplete.scrollPosition - aboutStart) <= 2
+      && partialAutoComplete.time - partialAutoStart.time >= 1700 && partialAutoComplete.time - partialAutoStart.time < 2700,
+    { partialAutoStart, partialAutoComplete });
+    apertureSamples.push(reversePartial, heldReverse, releasedReverse, reverseResumed, reverseSettled,
+      reverseFurther, retraced, retracedReleased, partialAutoComplete);
 
     // A quick release inside About retains its normal momentum, but that free
     // movement must stop at the aperture boundary rather than animate its reveal.

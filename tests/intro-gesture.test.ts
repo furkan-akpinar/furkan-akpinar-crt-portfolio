@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createIntroGestureState, reduceIntroGesture, type IntroGestureInput } from '../src/components/scene/intro-gesture.ts';
-import { PROJECT_ABOUT_TOUCH_DISTANCE_VH } from '../src/components/scene/project-about-transition.ts';
+import { PROJECT_ABOUT_TOUCH_DISTANCE_VH, PROJECT_ABOUT_TOUCH_DURATION } from '../src/components/scene/project-about-transition.ts';
 
 const wheel = (values: Partial<IntroGestureInput> = {}): IntroGestureInput => ({
   deltaX: 0, deltaY: 100, time: 0, scroll: 0, viewportHeight: 1000, ready: true, menuOpen: false, ...values,
@@ -107,28 +107,97 @@ test('invalid geometry cannot produce a nonfinite target and zero events do not 
 });
 
 
-test('mobile aperture follows finger distance equally forward and backward at every viewport', () => {
-  for (const height of [440, 820, 844, 956]) {
-    const start = Math.floor(1.42 * height), end = Math.ceil(5.6 * height) + 2;
-    const gain = (end - start) / (PROJECT_ABOUT_TOUCH_DISTANCE_VH * height);
-    const origin = start + (end - start) * .3;
-    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: origin, viewportHeight: height, deltaY: 40 }));
-    assert.equal(forward.action.type, 'scrub');
-    if (forward.action.type !== 'scrub') continue;
-    assert.ok(Math.abs(forward.action.top - origin - 40 * gain) < 1e-8);
-    const backward = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: forward.action.top, viewportHeight: height, deltaY: -40, time: 2000 }));
-    assert.deepEqual(backward.action, { type: 'scrub', top: origin });
-    assert.equal(backward.state.latch, null, 'holding or pausing never queues an automatic completion');
+test('a fresh mobile upward swipe plays the full reveal at every viewport and partial position', () => {
+  for (const height of [440, 568, 820, 844, 956, 1024, 843.5]) {
+    const end = Math.ceil(5.6 * height) + 2;
+    for (const scroll of [Math.ceil(1.4 * height), Math.floor(1.42 * height), 3 * height, end - .25]) {
+      const result = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, viewportHeight: height, deltaY: 12 }));
+      assert.deepEqual(result.action, { type: 'snap', top: end, duration: PROJECT_ABOUT_TOUCH_DURATION });
+      assert.equal(result.state.latch?.type, 'snap');
+      if (result.state.latch?.type !== 'snap') continue;
+      assert.equal(result.state.latch.durationMs, 2000);
+      assert.ok(Math.abs(result.state.latch.targetVh * height - end) < 1e-8);
+      assert.equal(result.state.scrubbingAperture, false);
+    }
+    assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: end, viewportHeight: height })).action.type, 'pass');
   }
 });
 
-test('a full mobile drag is bounded to the aperture and can reverse before release', () => {
+test('the mobile reveal requires twelve pixels in one vertical gesture and ignores separated jitters', () => {
+  let state = createIntroGestureState();
+  for (const [index, deltaY] of [3, 4, 4, 1].entries()) {
+    const result = reduceIntroGesture(state, wheel({ touch: true, scroll: 1420, deltaY, time: index * 20 }));
+    assert.equal(result.action.type, index === 3 ? 'snap' : 'block');
+    state = result.state;
+  }
+  for (const separator of [{ deltaY: -1 }, { deltaX: 6, deltaY: 1 }, { deltaY: 1, time: 300 }]) {
+    const initial = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, deltaY: 6 })).state;
+    const separated = reduceIntroGesture(initial, wheel({ touch: true, scroll: 1420, time: 20, ...separator })).state;
+    assert.equal(reduceIntroGesture(separated, wheel({ touch: true, scroll: 1420, deltaY: 6, time: (separator.time ?? 20) + 20 })).action.type, 'block');
+  }
+  state = createIntroGestureState();
+  for (const time of [0, 300, 600, 900]) {
+    const result = reduceIntroGesture(state, wheel({ touch: true, scroll: 1420, deltaY: 4, time }));
+    assert.equal(result.action.type, 'block');
+    state = result.state;
+  }
+});
+
+test('the mobile automatic journey remains latched after release until duration, settlement and quiet all hold', () => {
+  const first = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, time: 100 }));
+  assert.deepEqual(first.action, { type: 'snap', top: 5602, duration: 2 });
+  const idle = reduceIntroGesture(first.state, wheel({ touch: true, scroll: 3000, deltaY: 0, time: 800 }));
+  assert.equal(idle.state, first.state, 'lifting the finger supplies no further distance and must not cancel the scheduled endpoint');
+  assert.equal(reduceIntroGesture(first.state, wheel({ touch: true, scroll: 5602, time: 2099 })).action.type, 'block', 'the old 1.5-second latch must not unlock this two-second journey');
+  assert.equal(reduceIntroGesture(first.state, wheel({ touch: true, scroll: 5602, time: 2100 })).action.type, 'pass', 'exactly two seconds is sufficient when already settled and quiet');
+  const unfinished = reduceIntroGesture(first.state, wheel({ touch: true, scroll: 4000, time: 2200 }));
+  assert.equal(unfinished.action.type, 'block', 'elapsed and quiet do not unlock an unfinished reveal');
+  const arriving = reduceIntroGesture(unfinished.state, wheel({ touch: true, scroll: 5602, time: 2300 }));
+  assert.equal(arriving.action.type, 'block', 'settlement must not release a continuing input tail');
+  const fresh = reduceIntroGesture(arriving.state, wheel({ touch: true, scroll: 5602, time: 2500 }));
+  assert.equal(fresh.action.type, 'pass');
+  assert.equal(fresh.state.latch, null);
+});
+
+test('a continuing touch burst never replays or interrupts the scheduled mobile reveal', () => {
+  let state = createIntroGestureState();
+  const actions: string[] = [];
+  for (let index = 0; index <= 44; index++) {
+    const result = reduceIntroGesture(state, wheel({
+      touch: true, scroll: index >= 40 ? 5602 : 1420 + index * 100,
+      deltaY: index === 0 ? 12 : index % 2 === 0 ? -30 : 30, time: index * 50,
+    }));
+    state = result.state;
+    actions.push(result.action.type);
+  }
+  assert.equal(actions.filter(action => action === 'snap').length, 1);
+  assert.ok(actions.slice(1).every(action => action === 'block'));
+  assert.equal(reduceIntroGesture(state, wheel({ touch: true, scroll: 5602, time: 2400 })).action.type, 'pass');
+});
+
+test('a held reverse mobile drag can retrace manually with the original distance gain at every viewport', () => {
+  for (const height of [440, 820, 844, 956, 843.5]) {
+    const start = Math.floor(1.42 * height), end = Math.ceil(5.6 * height) + 2;
+    const gain = (end - start) / (PROJECT_ABOUT_TOUCH_DISTANCE_VH * height);
+    for (const origin of [end, start + (end - start) * .7]) {
+      const backward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: origin, viewportHeight: height, deltaY: -40 }));
+      assert.equal(backward.action.type, 'scrub');
+      if (backward.action.type !== 'scrub') continue;
+      assert.ok(Math.abs(origin - backward.action.top - 40 * gain) < 1e-8);
+      const forward = reduceIntroGesture(backward.state, wheel({ touch: true, scroll: backward.action.top, viewportHeight: height, deltaY: 40, time: 2000 }));
+      assert.equal(forward.action.type, 'scrub');
+      if (forward.action.type !== 'scrub') continue;
+      assert.ok(Math.abs(forward.action.top - origin) < 1e-8);
+      assert.equal(forward.state.latch, null, 'an already owned reverse drag never queues automatic completion');
+    }
+  }
+});
+
+test('a full reverse mobile drag is bounded to the aperture and can turn before release', () => {
   const start = 1420, end = 5602;
   const fullDrag = 1000 * PROJECT_ABOUT_TOUCH_DISTANCE_VH;
-  for (const scroll of [1402, start, 3000, 4700]) {
-    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, deltaY: fullDrag }));
-    assert.deepEqual(forward.action, { type: 'scrub', top: end });
-    const reverse = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: end, deltaY: -fullDrag }));
+  for (const scroll of [end, 3000, 4700]) {
+    const reverse = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, deltaY: -fullDrag }));
     assert.deepEqual(reverse.action, { type: 'scrub', top: start });
     const held = reduceIntroGesture(reverse.state, wheel({ touch: true, scroll: start, deltaY: -100 }));
     assert.deepEqual(held.action, { type: 'scrub', top: start }, 'same finger must not escape to Hero');
@@ -140,14 +209,15 @@ test('a full mobile drag is bounded to the aperture and can reverse before relea
     { type: 'snap', top: 0, duration: 1.5 }, 'a fresh reverse gesture at the resting film still returns to Hero');
 });
 
-test('short touch stops partially and a fresh gesture resumes from that position', () => {
-  const first = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, deltaY: 60 }));
+test('a short reverse drag holds partially and a fresh upward gesture automatically completes the reveal', () => {
+  const first = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5602, deltaY: -60 }));
   assert.ok(first.action.type === 'scrub' && first.action.top > 1420 && first.action.top < 5602);
   if (first.action.type !== 'scrub') return;
+  const idle = reduceIntroGesture(first.state, wheel({ touch: true, scroll: first.action.top, deltaY: 0, time: 1000 }));
+  assert.equal(idle.state, first.state);
+  assert.equal(idle.state.latch, null);
   const resumed = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: first.action.top, deltaY: 60, time: 3000 }));
-  assert.ok(resumed.action.type === 'scrub');
-  if (resumed.action.type !== 'scrub') return;
-  assert.ok(Math.abs(resumed.action.top - first.action.top - (first.action.top - 1420)) < 1e-8);
+  assert.deepEqual(resumed.action, { type: 'snap', top: 5602, duration: 2 });
 });
 
 test('entering the aperture from About accelerates only the distance inside its boundary', () => {

@@ -1,4 +1,4 @@
-import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS, PROJECT_ABOUT_TOUCH_DISTANCE_VH } from './project-about-transition.ts';
+import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS, PROJECT_ABOUT_TOUCH_DISTANCE_VH, PROJECT_ABOUT_TOUCH_DURATION } from './project-about-transition.ts';
 import { ABOUT_CURL_START_VH, ABOUT_CURL_END_VH, ABOUT_CURL_DURATION, nextCurlTargetVh } from '../../lib/about-curl.ts';
 
 /** Input arbitration: the caller owns scrolling, gallery changes, and navigation.
@@ -51,7 +51,7 @@ export const introSnapEase = (t: number) => t * t * (3 - 2 * t);
 
 type Axis = 'x' | 'y';
 type Direction = 1 | -1;
-type Latch = { type: 'snap'; targetVh: number; startedAt: number }
+type Latch = { type: 'snap'; targetVh: number; startedAt: number; durationMs?: number }
   | { type: 'gallery'; startedAt: number };
 
 export interface IntroGestureState {
@@ -101,7 +101,7 @@ export function reduceIntroGesture(
 
   if (state.latch?.type === 'snap') {
     const settled = Math.abs(input.scroll - state.latch.targetVh * input.viewportHeight) <= config.settleTolerancePx;
-    const elapsed = input.time - state.latch.startedAt >= config.snapDurationMs;
+    const elapsed = input.time - state.latch.startedAt >= (state.latch.durationMs ?? config.snapDurationMs);
     if (!(settled && elapsed && quiet)) return { state, action: { type: 'block' } };
     state.latch = null;
     state.accumulated = 0;
@@ -122,6 +122,17 @@ export function reduceIntroGesture(
 
   const apertureStart = Math.floor(PROJECT_ABOUT_START_VH * input.viewportHeight);
   const apertureEnd = Math.ceil(PROJECT_ABOUT_END_VH * input.viewportHeight) + 2;
+  if (input.touch && axis === 'y' && direction > 0 && !state.scrubbingAperture
+    && vh >= config.projectsStartVh && input.scroll < apertureEnd) {
+    if (state.accumulated < config.triggerPx) return { state, action: { type: 'block' } };
+    // Reuse the existing locked scroll journey. Its finger stays consumed until
+    // release, so the same swipe cannot skip into About after the reveal ends.
+    state.accumulated = 0;
+    state.apertureTargetVh = state.curlTargetVh = null;
+    state.latch = { type: 'snap', targetVh: apertureEnd / input.viewportHeight,
+      startedAt: input.time, durationMs: PROJECT_ABOUT_TOUCH_DURATION * 1000 };
+    return { state, action: { type: 'snap', top: apertureEnd, duration: PROJECT_ABOUT_TOUCH_DURATION } };
+  }
   const startsTouchScrub = direction > 0
     ? vh >= config.projectsStartVh && input.scroll < apertureEnd
     : input.scroll > apertureStart + config.settleTolerancePx && input.scroll + input.deltaY <= apertureEnd;
