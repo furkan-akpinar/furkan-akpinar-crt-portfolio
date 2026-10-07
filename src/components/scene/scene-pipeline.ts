@@ -282,7 +282,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   let failed = false;
   let frames = 0;
   const entry:ProjectEntry={phase:0,camera:0,depth:0,turns:0,caption:0,offsetX:0,offsetY:0,visiblePanels:0};
-  const diagnostics = { storyHeight: 0, sceneHeight: 0, scrollPosition: 0, scrollLimit: 0, scrollMode: 'native', frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
+  const diagnostics = { storyHeight: 0, sceneHeight: 0, scrollPosition: 0, scrollLimit: 0, scrollMode: 'native', frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, projectTitle:projectTitle.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
 
   let lastResize = '';
   function resize(nextWidth: number, nextHeight: number) {
@@ -344,7 +344,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     screenBlend.value=smooth((p-0.02)/0.25);
     const exit = state.scene.id==='projects'?sampleProjectAbout(runtime.progress):0;
     aperture.update(exit,w,h,runtime.time,runtime.reducedMotion);
-    projectTitle.update(runtime, entry.caption);
+    projectTitle.update(runtime, entry.caption, state.scene.id==='projects'||(state.scene.id==='hero'&&entry.phase>0));
     const entryStart=Math.round(runtime.projectPosition)-3;
     ring.update(runtime.projectPosition + entry.turns, mobile, entry.visiblePanels, entryStart, w / h);
     for(let i=0;i<entryMediaIndices.length;i++)entryMediaIndices[i]=((entryStart+i)%gallery.textures.length+gallery.textures.length)%gallery.textures.length;

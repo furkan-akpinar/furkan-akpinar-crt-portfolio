@@ -290,12 +290,23 @@ export function createCanvasUI(width: number, height: number) {
     const count = portfolio.projects.length;
     const active = ((options.projectIndex % count) + count) % count;
     const project = portfolio.projects[active];
-    ctx.font = `400 ${mobile ? Math.min(43, w * 0.1103) : 76 * scale}px ${SERIF}`;
-    // Fresh eHealth reference at 1440x900 / 1918x955: title baseline tracks
-    // 24% of height. The distant film stays behind this caption corridor.
     if (options.mode === 'project-title') {
-    ctx.fillText(project.title, w * 0.5, mobile ? 214 : h * 0.24, w * 0.89);
     const caption=projectCaptionLayout(w,h);
+    ctx.save();
+    ctx.font = `400 ${caption.titleFontSize}px ${SERIF}`;
+    if (mobile) {
+      // Match the hero's regular serif and open tracking. Fit long names by
+      // font size, so their letters keep their shape instead of being squeezed.
+      ctx.letterSpacing = '0.5px';
+      const size = caption.titleFontSize * Math.min(1, w * .89 / ctx.measureText(project.title).width);
+      ctx.font = `400 ${size}px ${SERIF}`;
+      // The project composite intentionally has less bloom than the hero.
+      // Restore its soft phosphor halo only on the cached heading artwork.
+      ctx.shadowColor = 'rgba(238,233,220,0.65)';
+      ctx.shadowBlur = 5 * pixelRatio;
+    }
+    ctx.fillText(project.title, w * 0.5, caption.titleBaseline, w * 0.89);
+    ctx.restore();
     ctx.font = `400 ${caption.fontSize}px ${SERIF}`;
     // The reference caption has a softer ink core than the display title.
     // Keep the regular font metrics; reduce only this caption's coverage.

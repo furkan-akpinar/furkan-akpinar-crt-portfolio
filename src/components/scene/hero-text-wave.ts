@@ -9,13 +9,13 @@ const halfFov = 25 * Math.PI / 180;
 const frontDistance = 6.5 / (1 + Math.tan(halfFov));
 const surfaceHeight = 2 * Math.tan(halfFov) * frontDistance;
 
-export function createHeroTextWave(width: number, height: number) {
+export function createHeroTextWave(width: number, height: number, rows = 12) {
   const phase = uniform(0);
   const amount = uniform(0);
   const aspect = uniform(width / height);
   const columnsFor = (w: number) => Math.max(2, Math.min(24, Math.round(w / 20)));
   let columns = columnsFor(width);
-  let geometry = new PlaneGeometry(2, 2, columns, 12);
+  let geometry = new PlaneGeometry(2, 2, columns, rows);
   const across = positionLocal.x.add(1).mul(0.5);
   const sideways = sin(across.mul(8).add(phase.mul(3))).mul(0.005 * 2 / surfaceHeight).mul(amount).div(aspect);
   const depth = sin(across.mul(10).add(phase.mul(4))).mul(0.007 / frontDistance).mul(amount);
@@ -38,7 +38,7 @@ export function createHeroTextWave(width: number, height: number) {
       const nextColumns = columnsFor(w);
       if (nextColumns !== columns) {
         geometry.dispose();
-        geometry = new PlaneGeometry(2, 2, nextColumns, 12);
+        geometry = new PlaneGeometry(2, 2, nextColumns, rows);
         columns = nextColumns;
         diagnostics.columns = columns;
       }

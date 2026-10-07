@@ -1,9 +1,11 @@
 import * as THREE from 'three/webgpu';
-import { cos, sin, positionLocal, texture, uniform, uv, vec2, vec3, vec4 } from 'three/tsl';
+import { cos, sin, float, mix, positionLocal, texture, uniform, uv, vec2, vec3, vec4 } from 'three/tsl';
 import { createCanvasUI } from './canvas-ui';
 import type { SceneRuntime } from './runtime';
 import { portfolio } from '@/content/portfolio';
 import { createResourceScope } from './resource-scope';
+import { createHeroTextWave } from './hero-text-wave';
+import { projectCaptionLayout } from './project-caption-layout';
 
 /** Two cached captions: typography is rasterized once per selection, motion is GPU-only. */
 export function createProjectTitle(width:number,height:number) {
@@ -17,13 +19,28 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
   const scene=new THREE.Scene();
   const shape=own(new THREE.PlaneGeometry(2,2,12,8));
   let w=width,h=height,key='';
+  // Dense rows keep the hero's small bend confined to the title glyphs; the
+  // nearby real links retain their stable artwork and hitboxes.
+  const wave=own(createHeroTextWave(w,h,128));
+  const viewportHeight=uniform(h);
+  const titleBounds=uniform(new THREE.Vector4());
+  const y=float(1).sub(positionLocal.y).mul(.5).mul(viewportHeight);
+  const titleMask=y.smoothstep(titleBounds.x,titleBounds.y)
+    .mul(y.smoothstep(titleBounds.z,titleBounds.w).oneMinus());
+  const titlePosition=mix(positionLocal,wave.positionNode,titleMask);
+  function syncTitleBounds() {
+    const {titleBaseline,titleFontSize}=projectCaptionLayout(w,h);
+    titleBounds.value.set(titleBaseline-titleFontSize*1.25-8,titleBaseline-titleFontSize*1.25,titleBaseline+5,titleBaseline+10);
+    viewportHeight.value=h;
+  }
+  syncTitleBounds();
   const slots=[0,1].map(()=>{
     const ui=own(createCanvasUI(w,h));
     const angle=uniform(0), opacity=uniform(0), lift=uniform(0), blur=uniform(0);
     const pixel=uniform(new THREE.Vector2(1/w,1/h));
     const material=own(new THREE.MeshBasicNodeMaterial({transparent:true,depthTest:false,depthWrite:false}));
     const pivot=uniform(0.6);
-    const relative=positionLocal.xy.sub(vec2(0,pivot));
+    const relative=titlePosition.xy.sub(vec2(0,pivot));
     const depth=relative.y.mul(sin(angle)).mul(0.95).add(1);
     material.positionNode=vec3(relative.x.div(depth),relative.y.mul(cos(angle)).div(depth).add(pivot).add(lift),0);
     const shift=pixel.mul(vec2(1,3)).mul(blur);
@@ -32,7 +49,7 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
       .add(texture(ui.texture,uv().sub(shift)).mul(0.25));
     material.colorNode=vec4(soft.rgb,soft.a.mul(opacity));
     material.toneMapped=false;
-    const mesh=new THREE.Mesh(shape,material);scene.add(mesh);
+    const mesh=new THREE.Mesh(w<900?wave.geometry:shape,material);scene.add(mesh);
     return {ui,material,angle,opacity,lift,blur,pixel,pivot,mesh};
   });
   const ease=(x:number)=>1-Math.pow(1-THREE.MathUtils.clamp(x,0,1),3);
@@ -44,7 +61,8 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
     slot.mesh.rotation.z=entryRoll+roll;
     slot.mesh.position.set(x*Math.cos(entryRoll)-y*Math.sin(entryRoll),x*Math.sin(entryRoll)+y*Math.cos(entryRoll),0);
   }
-  function update(runtime: SceneRuntime, entrance = 1) {
+  function update(runtime: SceneRuntime, entrance = 1, active = true) {
+    wave.update(runtime.time,w<900&&active&&entrance>0&&!runtime.reducedMotion&&!document.hidden);
     const count=portfolio.projects.length;
     const incoming=((runtime.projectTarget%count)+count)%count;
     const nextKey=`${w}/${h}/${runtime.projectFrom}/${incoming}`;
@@ -72,8 +90,14 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
     captionRoll(next,-0.16*Math.sin(arrival*Math.PI)*entrance,-(1-entrance)*0.08);
     next.blur.value=Math.sin(revealArrival*Math.PI)*1.7;
   }
-  return {scene,update,resize(width:number,height:number){
+  return {scene,update,diagnostics:wave.diagnostics,resize(width:number,height:number){
     w=width;h=height;key='';
-    slots.forEach(slot=>{slot.ui.resize(w,h);slot.pixel.value.set(1/w,1/h);slot.pivot.value=w<900?1-440/h:0.6;});
+    wave.resize(w,h);syncTitleBounds();
+    const {titleBaseline}=projectCaptionLayout(w,h);
+    slots.forEach(slot=>{
+      slot.ui.resize(w,h);slot.pixel.value.set(1/w,1/h);
+      slot.pivot.value=w<900?1-2*(titleBaseline+6)/h:0.6;
+      slot.mesh.geometry=w<900?wave.geometry:shape;
+    });
   },dispose(){scope.dispose();scene.clear();}};
 }
