@@ -47,6 +47,7 @@ function withTouchDriver(run: (state: {
   touch: (type: string, points: Array<[number, number]>) => Event;
   zoom: (scale: number) => void;
   nativeZoom: () => string | undefined;
+  gestureStarts: () => number;
 }) => void) {
   const priorWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
   // No scrollTo/scrollY exist on this window: input must only use read/write.
@@ -54,6 +55,7 @@ function withTouchDriver(run: (state: {
   Object.defineProperty(globalThis, 'window', { value: Object.assign(new EventTarget(), { visualViewport }), configurable: true });
   const target = Object.assign(new EventTarget(), { clientHeight: 820, dataset: {} as Record<string, string> });
   let position = 100;
+  let gestureStarts = 0;
   const calls: number[][] = [];
   const driver = createMobileScroll({
     target: target as unknown as HTMLElement,
@@ -62,6 +64,7 @@ function withTouchDriver(run: (state: {
     limit: () => 1000,
     reducedMotion: true,
     arbitrate: (dx, dy) => { calls.push([dx, dy]); return true; },
+    onTouchStart: () => { gestureStarts++; },
   });
   const touch = (type: string, points: Array<[number, number]>) => {
     const event = new Event(type, { cancelable: true });
@@ -71,7 +74,7 @@ function withTouchDriver(run: (state: {
   };
   try { run({ driver, read: () => position, calls, touch,
     zoom: scale => { visualViewport.scale = scale; visualViewport.dispatchEvent(new Event('resize')); },
-    nativeZoom: () => target.dataset.nativeZoom }); }
+    nativeZoom: () => target.dataset.nativeZoom, gestureStarts: () => gestureStarts }); }
   finally {
     driver.destroy();
     if (priorWindow) Object.defineProperty(globalThis, 'window', priorWindow);
@@ -189,5 +192,27 @@ test('a locked immediate journey consumes the current finger through release, in
     touch('touchmove', [[200, 450]]);
     touch('touchend', []);
     assert.equal(read(), 650, 'a new gesture regains control');
+  });
+});
+
+test('scene drag ownership resets only on a fresh unblocked single-finger touch', () => {
+  withTouchDriver(({ driver, touch, zoom, gestureStarts }) => {
+    touch('touchstart', [[200, 500]]);
+    touch('touchmove', [[200, 450]]);
+    touch('touchmove', [[200, 460]]);
+    assert.equal(gestureStarts(), 1, 'pause and reversal keep the same drag owner');
+    touch('touchend', []);
+    touch('touchstart', [[200, 500]]);
+    assert.equal(gestureStarts(), 2, 'lifting then touching again releases the previous owner');
+    touch('touchstart', [[200, 500], [240, 500]]);
+    zoom(2);
+    touch('touchstart', [[200, 500]]);
+    zoom(1);
+    driver.stop();
+    touch('touchstart', [[200, 500]]);
+    assert.equal(gestureStarts(), 2, 'zoom, multiple fingers and a stopped menu must not acquire ownership');
+    driver.start();
+    touch('touchstart', [[200, 500]]);
+    assert.equal(gestureStarts(), 3);
   });
 });

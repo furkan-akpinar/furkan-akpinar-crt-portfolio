@@ -26,6 +26,10 @@ export interface MobileScrollOptions {
   reducedMotion: boolean;
   /** False means the existing scene gesture owner consumed this input. */
   arbitrate: (deltaX: number, deltaY: number, event: Event) => boolean;
+  /** Reset scene ownership for a new finger, never midway through a drag. */
+  onTouchStart?: () => void;
+  /** Keep release inertia outside intervals that require direct finger control. */
+  constrainMomentum?: (from: number, to: number) => number;
 }
 
 export function clampMobileScroll(position: number, limit: number): number {
@@ -63,7 +67,7 @@ type Finger = {
 };
 
 /** Owns numeric scene distance only. It never reads or writes document scroll. */
-export function createMobileScroll({ target, read, write, limit, reducedMotion, arbitrate }: MobileScrollOptions): ScrollDriver {
+export function createMobileScroll({ target, read, write, limit, reducedMotion, arbitrate, onTouchStart, constrainMomentum }: MobileScrollOptions): ScrollDriver {
   let stopped = false;
   let destroyed = false;
   let locked = false;
@@ -116,6 +120,7 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
       return;
     }
     if (!locked) cancelAnimation();
+    if (!locked && !stopped) onTouchStart?.();
     const touch = event.touches[0];
     const now = performance.now();
     finger = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY,
@@ -160,8 +165,10 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
     const released = finger;
     finger = null;
     if (!released || released.consumed || zoomed() || event.touches.length > 0 || released.axis !== 'y' || stopped || locked || reducedMotion) return;
-    const momentum = mobileScrollMomentum(position(), released.velocity, performance.now() - released.lastMovement, limit());
-    if (momentum.duration) scrollTo(momentum.top, { duration: momentum.duration, programmatic: false });
+    const from = position();
+    const momentum = mobileScrollMomentum(from, released.velocity, performance.now() - released.lastMovement, limit());
+    const top = constrainMomentum?.(from, momentum.top) ?? momentum.top;
+    if (momentum.duration) scrollTo(top, { duration: momentum.duration, programmatic: false });
   }
 
   function touchCancel() { finger = null; }

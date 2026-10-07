@@ -106,36 +106,66 @@ test('invalid geometry cannot produce a nonfinite target and zero events do not 
 });
 
 
-test('one deliberate touch completes Projects to About from menu, resting film and partial reveal', () => {
+test('mobile aperture follows finger distance equally forward and backward at every viewport', () => {
   for (const height of [440, 820, 844, 956]) {
-    for (const vh of [1.4 + 2 / height, 1.42, 3, 4.7, 5.59]) {
-      const result = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: vh * height, viewportHeight: height, deltaY: 16 }));
-      assert.deepEqual(result.action, { type: 'snap', top: Math.ceil(5.6 * height) + 2, duration: 1.4 });
-    }
+    const start = Math.floor(1.42 * height), end = Math.ceil(5.6 * height) + 2;
+    const gain = (end - start) / (.6 * height);
+    const origin = start + (end - start) * .3;
+    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: origin, viewportHeight: height, deltaY: 40 }));
+    assert.equal(forward.action.type, 'scrub');
+    if (forward.action.type !== 'scrub') continue;
+    assert.ok(Math.abs(forward.action.top - origin - 40 * gain) < 1e-8);
+    const backward = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: forward.action.top, viewportHeight: height, deltaY: -40, time: 2000 }));
+    assert.deepEqual(backward.action, { type: 'scrub', top: origin });
+    assert.equal(backward.state.latch, null, 'holding or pausing never queues an automatic completion');
   }
 });
 
-test('touch reveal ignores jitter then accumulates a single deliberate forward drag', () => {
-  let state = createIntroGestureState();
-  for (const [index, deltaY] of [4, 4, 4].entries()) {
-    const result = reduceIntroGesture(state, wheel({ touch: true, scroll: 1420, deltaY, time: index * 20 }));
-    assert.equal(result.action.type, index === 2 ? 'snap' : 'block');
-    state = result.state;
+test('a full mobile drag is bounded to the aperture and can reverse before release', () => {
+  const start = 1420, end = 5602;
+  for (const scroll of [1402, start, 3000, 4700]) {
+    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, deltaY: 600 }));
+    assert.deepEqual(forward.action, { type: 'scrub', top: end });
+    const reverse = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: end, deltaY: -600 }));
+    assert.deepEqual(reverse.action, { type: 'scrub', top: start });
+    const held = reduceIntroGesture(reverse.state, wheel({ touch: true, scroll: start, deltaY: -100 }));
+    assert.deepEqual(held.action, { type: 'scrub', top: start }, 'same finger must not escape to Hero');
+    const turn = reduceIntroGesture(held.state, wheel({ touch: true, scroll: start, deltaY: 20 }));
+    assert.equal(turn.action.type, 'scrub');
+    assert.ok(turn.action.type === 'scrub' && turn.action.top > start);
   }
-  const during = reduceIntroGesture(state, wheel({ touch: true, scroll: 3000, time: 500 }));
-  assert.equal(during.action.type, 'block');
-  const settled = reduceIntroGesture(during.state, wheel({ touch: true, scroll: 5602, time: 1440 }));
-  assert.equal(settled.action.type, 'pass', 'a new drag can scroll About once the 1.4s journey is settled');
+  assert.deepEqual(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: start, deltaY: -100 })).action,
+    { type: 'snap', top: 0, duration: 1.5 }, 'a fresh reverse gesture at the resting film still returns to Hero');
 });
 
-test('touch reveal does not change hero, backward drag, About reading or horizontal gallery behavior', () => {
+test('short touch stops partially and a fresh gesture resumes from that position', () => {
+  const first = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, deltaY: 60 }));
+  assert.ok(first.action.type === 'scrub' && first.action.top > 1420 && first.action.top < 5602);
+  if (first.action.type !== 'scrub') return;
+  const resumed = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: first.action.top, deltaY: 60, time: 3000 }));
+  assert.ok(resumed.action.type === 'scrub');
+  if (resumed.action.type !== 'scrub') return;
+  assert.ok(Math.abs(resumed.action.top - first.action.top - (first.action.top - 1420)) < 1e-8);
+});
+
+test('entering the aperture from About accelerates only the distance inside its boundary', () => {
+  assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5802, deltaY: -100 })).action.type, 'pass');
+  const crossed = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5802, deltaY: -260 }));
+  assert.deepEqual(crossed.action, { type: 'scrub', top: 5602 - 60 * (5602 - 1420) / 600 });
+  const menu = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5602, deltaY: -60 }));
+  assert.deepEqual(menu.action, crossed.action);
+});
+
+test('touch scrub preserves Hero, About reading, horizontal gallery and desktop input', () => {
   assert.deepEqual(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true })).action,
     { type: 'snap', top: 1420, duration: 1.5 });
-  for (const values of [{ scroll: 4700, deltaY: -100 }, { scroll: 5602 }, { scroll: 7500 }]) {
+  for (const values of [{ scroll: 5602 }, { scroll: 7500 }, { scroll: 7500, deltaY: -100 }]) {
     assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, ...values })).action.type, 'pass');
   }
   assert.deepEqual(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, deltaX: 100, deltaY: 1 })).action,
     { type: 'gallery', direction: 1 });
-  assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ scroll: 1420, deltaY: 16 })).action.type, 'pass',
-    'desktop continuous input keeps its existing distance-driven behavior');
+  for (const deltaY of [-100, 100]) {
+    assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ scroll: 3000, deltaY })).action.type, 'pass');
+    assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ scroll: 3000, deltaY, wheelSteps: Math.sign(deltaY) })).action.type, 'aperture');
+  }
 });

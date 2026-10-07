@@ -6,7 +6,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import type { SceneRuntime } from './scene/runtime';
 import { createIntroGestureState, reduceIntroGesture, introSnapEase } from './scene/intro-gesture';
-import { projectAboutWheelSteps } from './scene/project-about-transition';
+import { projectAboutWheelSteps, PROJECT_ABOUT_END_VH } from './scene/project-about-transition';
 import { MENU_SIGNAL_DURATION, monitorMenuTransition, type MenuNavigationRequest } from './scene/menu-navigation';
 import { sceneScrollTop, storyProgress, SCROLL_SCREENS } from './scene/runtime';
 import { getSceneState, type SceneId } from '@/config/scenes';
@@ -75,6 +75,11 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
       if (result.action.type === 'pass') return true;
 
       event.preventDefault();
+      if (result.action.type === 'scrub') {
+        // Direct finger movement has no tween or release momentum. Returning
+        // false also clears the mobile driver's velocity for this input.
+        driver?.scrollTo(result.action.top, { immediate: true, force: true });
+      }
       if (result.action.type === 'gallery') {
         window.dispatchEvent(new CustomEvent('study-project', { detail: result.action.direction }));
       }
@@ -120,6 +125,11 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
         limit: () => data.scrollLimit,
         reducedMotion,
         arbitrate: arbitrateGesture,
+        onTouchStart: () => { gesture = createIntroGestureState(); },
+        constrainMomentum: (from, to) => {
+          const boundary = Math.ceil(PROJECT_ABOUT_END_VH * data.storyHeight) + 2;
+          return from >= boundary && to < boundary ? boundary : to;
+        },
       });
     } else if (!reducedMotion) {
       lenis = new Lenis({

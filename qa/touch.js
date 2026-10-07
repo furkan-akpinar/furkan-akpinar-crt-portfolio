@@ -6,9 +6,15 @@ async page => {
     ...['projects', 'about-us', 'contact', 'hero'].map(scene => `touch menu ${scene}`),
     'controlled touch swipe enters projects', 'one horizontal gesture advances exactly one project', 'one reverse horizontal gesture returns exactly one project',
     'horizontal gestures preserve the story position',
-    'one touch swipe animates the aperture at 150ms', 'one touch swipe advances the aperture at 650ms',
-    'one touch swipe completes About by 1700ms', 'held aperture finger cannot overscroll after completion',
-    'fresh touch swipe resumes About scrolling', 'aperture gesture keeps the root locked and canvas stable',
+    'short touch drag advances only part of the aperture', 'stationary finger leaves the aperture stationary',
+    'released partial aperture stays stationary beyond 1.4 seconds', 'fresh touch resumes the partial aperture',
+    'quickly released partial aperture has no momentum',
+    'equal reverse finger travel restores the partial aperture', 'one continuous drag completes the aperture',
+    'held forward finger is bounded to the About endpoint', 'held finger reverses from the About endpoint',
+    'equal forward finger travel restores the About endpoint', 'released completed aperture stays stationary',
+    'one continuous reverse drag reaches Projects without entering Hero', 'held finger reverses from the Projects endpoint',
+    'fresh touch swipe resumes About scrolling', 'About release momentum cannot enter the aperture',
+    'aperture gesture keeps the root locked and canvas stable',
     'controlled touch swipe returns to hero',
     'wide rotation retains mobile textures', 'no second model requested after rotation', 'all mobile stages keep the root document locked',
     'touch context has no page errors', 'touch scenario completed'];
@@ -117,51 +123,119 @@ async page => {
     check('horizontal gestures preserve the story position', [horizontalAfter, horizontalSettled, horizontalReverse].every(state => state.scene === 'projects'
       && Math.abs(state.scrollPosition - horizontalBefore.scrollPosition) <= 2), { horizontalBefore, horizontalAfter, horizontalSettled, horizontalReverse });
 
-    // Keep one finger down beyond the complete transition. This exposes a driver
-    // that resumes the same drag as soon as its animation lock expires.
+    // Movement is proportional to finger travel. Neither a stationary finger nor
+    // a release may start an automatic continuation, even beyond the old 1.4s snap.
     const apertureBefore = await hold(1.42);
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 220, y: 760 }] });
-    apertureFingerHeld = true;
-    const apertureStarted = await mobile.evaluate(() => performance.now());
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 700 }] });
-    const sampleApertureAt = async milliseconds => {
-      const remaining = await mobile.evaluate(start => start - performance.now(), apertureStarted + milliseconds);
-      if (remaining > 0) await mobile.waitForTimeout(remaining);
-      const state = await snapshot();
-      return { ...state, elapsed: state.time - apertureStarted };
+    const touchDown = async y => {
+      await emulation.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 220, y }] });
+      apertureFingerHeld = true;
     };
-    const aperture150 = await sampleApertureAt(150);
-    const aperture650 = await sampleApertureAt(650);
-    const apertureComplete = await sampleApertureAt(1700);
+    const touchMove = async y => {
+      await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y }] });
+      await mobile.waitForTimeout(80);
+      return snapshot();
+    };
+    const touchUp = async () => {
+      await emulation.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      apertureFingerHeld = false;
+    };
+    const stationary = (a, b) => Math.abs(a.scrollPosition - b.scrollPosition) <= 2
+      && a.scene === b.scene && Math.abs(a.projectExit - b.projectExit) < 0.001;
+    const apertureStart = Math.floor(1.42 * apertureBefore.storyHeight);
     const aboutStart = Math.ceil(5.6 * apertureBefore.storyHeight) + 2;
-    check('one touch swipe animates the aperture at 150ms', aperture150.scene === 'projects'
-      && aperture150.scrollPosition > apertureBefore.scrollPosition + 2 && aperture150.scrollPosition < aboutStart - 2
-      && aperture150.projectExit > 0 && aperture150.projectExit < 1, { apertureBefore, aperture150 });
-    check('one touch swipe advances the aperture at 650ms', aperture650.scene === 'projects'
-      && aperture650.scrollPosition > aperture150.scrollPosition + 2 && aperture650.scrollPosition < aboutStart - 2
-      && aperture650.projectExit > aperture150.projectExit && aperture650.projectExit < 1, { aperture150, aperture650 });
-    check('one touch swipe completes About by 1700ms', apertureComplete.scene === 'about-us'
-      && Math.abs(apertureComplete.scrollPosition - aboutStart) <= 2,
-    { apertureBefore, aperture150, aperture650, apertureComplete, aboutStart });
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 520 }] });
-    await mobile.waitForTimeout(250);
-    const apertureHeldForward = await snapshot();
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 600 }] });
-    await mobile.waitForTimeout(250);
-    const apertureHeldReverse = await snapshot();
-    await emulation.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    apertureFingerHeld = false;
-    await mobile.waitForTimeout(600);
+    const apertureSamples = [];
+    await touchDown(760);
+    const partial = await touchMove(700);
+    check('short touch drag advances only part of the aperture', partial.scene === 'projects'
+      && partial.scrollPosition > apertureBefore.scrollPosition + 300 && partial.scrollPosition < aboutStart - 2
+      && partial.projectExit > 0 && partial.projectExit < 1, { apertureBefore, partial });
+    await mobile.waitForTimeout(1700);
+    const heldPartial = await snapshot();
+    check('stationary finger leaves the aperture stationary', stationary(partial, heldPartial), { partial, heldPartial });
+    await touchUp();
+    await mobile.waitForTimeout(1700);
+    const releasedPartial = await snapshot();
+    check('released partial aperture stays stationary beyond 1.4 seconds', stationary(partial, releasedPartial), { partial, releasedPartial });
+    await touchDown(760);
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 700 }] });
+    await touchUp();
+    await mobile.waitForTimeout(80);
+    const resumed = await snapshot();
+    check('fresh touch resumes the partial aperture', resumed.scene === 'projects'
+      && resumed.scrollPosition > releasedPartial.scrollPosition + 300 && resumed.scrollPosition < aboutStart - 2,
+    { releasedPartial, resumed });
+    await mobile.waitForTimeout(1700);
+    const releasedResume = await snapshot();
+    const expectedResumed = releasedPartial.scrollPosition + 60 * (aboutStart - apertureStart) / (0.6 * apertureBefore.storyHeight);
+    check('quickly released partial aperture has no momentum', Math.abs(resumed.scrollPosition - expectedResumed) <= 2
+      && stationary(resumed, releasedResume), { resumed, releasedResume, expectedResumed });
+    await touchDown(700);
+    const restoredPartial = await touchMove(760);
+    check('equal reverse finger travel restores the partial aperture', stationary(partial, restoredPartial), { partial, resumed, restoredPartial });
+    await touchUp();
+    apertureSamples.push(partial, heldPartial, releasedPartial, resumed, releasedResume, restoredPartial);
+
+    await hold(1.42);
+    await touchDown(800);
+    const fullTravel = 0.6 * apertureBefore.storyHeight + 1;
+    for (let step = 1; step <= 8; step++) apertureSamples.push(await touchMove(800 - fullTravel * step / 8));
+    const apertureComplete = apertureSamples[apertureSamples.length - 1];
+    check('one continuous drag completes the aperture', apertureComplete.scene === 'about-us'
+      && Math.abs(apertureComplete.scrollPosition - aboutStart) <= 2, { apertureComplete, fullTravel, aboutStart });
+    const completeY = 800 - fullTravel;
+    const boundedAbout = await touchMove(completeY - 60);
+    check('held forward finger is bounded to the About endpoint', stationary(apertureComplete, boundedAbout), { apertureComplete, boundedAbout });
+    const reverseFromAbout = await touchMove(completeY);
+    check('held finger reverses from the About endpoint', reverseFromAbout.scene === 'projects'
+      && reverseFromAbout.scrollPosition < aboutStart - 300 && reverseFromAbout.projectExit > 0 && reverseFromAbout.projectExit < 1,
+    { boundedAbout, reverseFromAbout });
+    const restoredAbout = await touchMove(completeY - 60);
+    check('equal forward finger travel restores the About endpoint', stationary(apertureComplete, restoredAbout), { apertureComplete, reverseFromAbout, restoredAbout });
+    await touchUp();
+    await mobile.waitForTimeout(1700);
     const apertureReleased = await snapshot();
-    check('held aperture finger cannot overscroll after completion', [apertureHeldForward, apertureHeldReverse, apertureReleased].every(state => state.scene === 'about-us'
-      && Math.abs(state.scrollPosition - apertureComplete.scrollPosition) <= 2),
-    { apertureComplete, apertureHeldForward, apertureHeldReverse, apertureReleased });
+    check('released completed aperture stays stationary', stationary(apertureComplete, apertureReleased), { apertureComplete, apertureReleased });
+    apertureSamples.push(boundedAbout, reverseFromAbout, restoredAbout, apertureReleased);
+
     await swipe({ x: 220, y: 760 }, { x: 220, y: 600 });
     await mobile.waitForTimeout(600);
     const freshAbout = await snapshot();
     check('fresh touch swipe resumes About scrolling', freshAbout.scene === 'about-us'
       && freshAbout.scrollPosition > apertureReleased.scrollPosition + 20, { apertureReleased, freshAbout });
-    const apertureSamples = [aperture150, aperture650, apertureComplete, apertureHeldForward, apertureHeldReverse, apertureReleased, freshAbout];
+    apertureSamples.push(freshAbout);
+
+    // A quick release inside About retains its normal momentum, but that free
+    // movement must stop at the aperture boundary rather than animate its reveal.
+    const momentumBefore = await hold((aboutStart + 150) / apertureBefore.storyHeight);
+    await touchDown(400);
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 460 }] });
+    await touchUp();
+    const momentumSamples = [];
+    for (const delay of [80, 120, 450]) {
+      await mobile.waitForTimeout(delay);
+      momentumSamples.push(await snapshot());
+    }
+    const momentumAfter = momentumSamples[momentumSamples.length - 1];
+    check('About release momentum cannot enter the aperture', momentumBefore.scene === 'about-us'
+      && momentumSamples.every(state => state.scene === 'about-us' && state.scrollPosition >= aboutStart - 2)
+      && momentumAfter.scrollPosition < momentumBefore.scrollPosition - 65,
+    { momentumBefore, momentumSamples, aboutStart, fingerTravel: 60 });
+    apertureSamples.push(momentumBefore, ...momentumSamples);
+
+    await hold(aboutStart / apertureBefore.storyHeight);
+    await touchDown(160);
+    for (let step = 1; step <= 8; step++) apertureSamples.push(await touchMove(160 + fullTravel * step / 8));
+    const projectsEndpoint = apertureSamples[apertureSamples.length - 1];
+    const boundedProjects = await touchMove(160 + fullTravel + 60);
+    check('one continuous reverse drag reaches Projects without entering Hero', projectsEndpoint.scene === 'projects'
+      && Math.abs(projectsEndpoint.scrollPosition - apertureStart) <= 2 && stationary(projectsEndpoint, boundedProjects),
+    { projectsEndpoint, boundedProjects, apertureStart });
+    const reverseFromProjects = await touchMove(160 + fullTravel);
+    check('held finger reverses from the Projects endpoint', reverseFromProjects.scene === 'projects'
+      && reverseFromProjects.scrollPosition > apertureStart + 300 && reverseFromProjects.projectExit > 0 && reverseFromProjects.projectExit < 1,
+    { boundedProjects, reverseFromProjects });
+    await touchUp();
+    apertureSamples.push(boundedProjects, reverseFromProjects);
     check('aperture gesture keeps the root locked and canvas stable', apertureBefore.canvas
       && apertureSamples.every(state => state.scrollMode === 'controlled' && state.scrollY === 0 && state.documentHeight <= state.height
         && state.sceneHeight === apertureBefore.sceneHeight && state.canvas

@@ -185,18 +185,21 @@ async page => {
 
     for (const stop of [stops[2], stops[1], stops[3]]) {
       const before = await hold(stop.vh);
-      await swipe(650, 490);
+      const fingerTravel = stop.name === 'aperture' ? 60 : 160;
+      await swipe(650, 650 - fingerTravel);
       const forward = await snapshot();
-      const forwardScene = stop.name === 'aperture' ? 'about-us' : stop.scene;
-      check(`${stop.name}: forward controlled swipe`, forward.scrollPosition > before.scrollPosition + 20 && forward.scene === forwardScene
-        && (stop.name !== 'aperture' || (Math.abs(forward.scrollPosition - (Math.ceil(5.6 * forward.storyHeight) + 2)) <= 2)), { before, forward });
-      // Forward touch now completes the aperture. Start the reverse check from
-      // its own mid-aperture hold so it still tests continuous backward motion.
-      const reverseBefore = await hold(stop.vh);
-      await swipe(490, 650);
+      const apertureGain = (Math.ceil(5.6 * before.storyHeight) + 2 - Math.floor(1.42 * before.storyHeight)) / (0.6 * before.storyHeight);
+      check(`${stop.name}: forward controlled swipe`, forward.scrollPosition > before.scrollPosition + 20 && forward.scene === stop.scene
+        && (stop.name !== 'aperture' || (forward.projectExit > before.projectExit && forward.projectExit < 1
+          && Math.abs(forward.scrollPosition - before.scrollPosition - fingerTravel * apertureGain) <= 2)), { before, forward, fingerTravel });
+      // Reverse the same physical distance from the paused aperture. Its pose
+      // must return to the starting point rather than auto-complete either way.
+      const reverseBefore = stop.name === 'aperture' ? forward : await hold(stop.vh);
+      await swipe(650 - fingerTravel, 650);
       const reverse = await snapshot();
-      check(`${stop.name}: reverse controlled swipe`, reverse.scrollPosition < reverseBefore.scrollPosition - 20 && reverse.scene === stop.scene,
-        { reverseBefore, reverse });
+      check(`${stop.name}: reverse controlled swipe`, reverse.scrollPosition < reverseBefore.scrollPosition - 20 && reverse.scene === stop.scene
+        && (stop.name !== 'aperture' || (Math.abs(reverse.scrollPosition - before.scrollPosition) <= 2 && samePose(before, reverse))),
+      { before, reverseBefore, reverse, fingerTravel });
     }
     await hold(0);
     await swipe(680, 410);
