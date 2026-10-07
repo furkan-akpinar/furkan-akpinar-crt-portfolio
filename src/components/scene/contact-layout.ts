@@ -1,5 +1,5 @@
 /** A single composition. Small screens scroll only the pixels that do not fit. */
-export function contactLayout(width: number, height: number, progress = 0) {
+export function contactLayout(width: number, height: number, progress = 0, storyHeight = height) {
   const mobile = width < 650;
   const scale = mobile ? Math.min(1, width / 390) : Math.min(width / (width < 900 ? 1000 : 1440), height / 900);
   const headerHeight = width < 600 ? 64 : width < 900 ? 105 : 105 * Math.min(1, width / 1440);
@@ -18,7 +18,7 @@ export function contactLayout(width: number, height: number, progress = 0) {
   const travel = Math.max(0, contentBottom - height);
   // The scene's virtual range remains 1.5vh, while its physical range is only
   // `travel`. Earlier scenes keep their established absolute scroll positions.
-  const offset = Math.min(travel, Math.max(0, Number.isFinite(progress) ? progress : 0) * 1.5 * height);
+  const offset = Math.min(travel, Math.max(0, Number.isFinite(progress) ? progress : 0) * 1.5 * storyHeight);
   const rect = (x: number, y: number, w: number, h: number) => ({
     x: width / 2 + x * scale, y: detailsTop + y * scale - offset,
     width: w * scale, height: h * scale,

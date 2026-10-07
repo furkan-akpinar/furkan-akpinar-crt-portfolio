@@ -282,7 +282,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   let failed = false;
   let frames = 0;
   const entry:ProjectEntry={phase:0,camera:0,depth:0,turns:0,caption:0,offsetX:0,offsetY:0,visiblePanels:0};
-  const diagnostics = { frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
+  const diagnostics = { storyHeight: 0, frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
 
   let lastResize = '';
   function resize(nextWidth: number, nextHeight: number) {
@@ -320,6 +320,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   function render(runtime: SceneRuntime, delta: number) {
     if (failed) return;
     if (assetError) throw assetError;
+    diagnostics.storyHeight = runtime.storyHeight;
     runtime.time += runtime.reducedMotion ? 0 : Math.min(delta, 0.1);
     time.value = runtime.time;
     menuSignal.progress.value=runtime.menuSignalProgress;

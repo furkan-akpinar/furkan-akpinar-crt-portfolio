@@ -12,6 +12,7 @@ export interface UIOptions {
   projectIndex: number;
   /** Local progress through this scene. Camera progress remains separate. */
   sceneProgress?: number;
+  storyHeight?: number;
   headerVisible?: boolean;
   headerDark?: boolean;
   menuOpen?: boolean;
@@ -383,7 +384,7 @@ export function createCanvasUI(width: number, height: number) {
     loadPortrait();
     const w = logicalWidth;
     const h = logicalHeight;
-    const layout = contactLayout(w, h, options.sceneProgress);
+    const layout = contactLayout(w, h, options.sceneProgress, options.storyHeight);
     const { mobile, scale: contactScale, boxWidth, boxHeight, boxY, footerY } = layout;
     const headerHeight = navigationLayout(w, (text, font) => { ctx.font = font; return ctx.measureText(text).width; }, portfolio.home).height;
     ctx.save();

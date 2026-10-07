@@ -4,6 +4,7 @@ async page => {
   const mobile = page, checks = [], errors = [], requests = [];
   const emulation = await context.newCDPSession(mobile);
   const originalAgent = await mobile.evaluate(() => navigator.userAgent);
+  await mobile.setViewportSize({width:440,height:956});
   await emulation.send('Emulation.setDeviceMetricsOverride', {width:440,height:956,deviceScaleFactor:3,mobile:true});
   await emulation.send('Emulation.setTouchEmulationEnabled', {enabled:true,maxTouchPoints:5});
   await emulation.send('Emulation.setUserAgentOverride', {userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'});

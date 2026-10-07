@@ -23,9 +23,8 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
   useEffect(() => {
     let gesture = createIntroGestureState();
     let lenis: Lenis | null = null;
-    let viewport = { width: window.innerWidth, height: window.innerHeight };
+    let viewport = { width: window.innerWidth, height: runtime.current.storyHeight };
     let disposed = false;
-    let resizeTimer: ReturnType<typeof setTimeout> | undefined;
     let signalTimeline: gsap.core.Timeline | null = null;
     let pending: MenuNavigationRequest | null = null;
     let committed = false;
@@ -57,7 +56,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         wheelSteps,
         time: performance.now(),
         scroll: window.scrollY,
-        viewportHeight: window.innerHeight,
+        viewportHeight: runtime.current.storyHeight,
         ready: runtime.current.intro >= 1,
         menuOpen: runtime.current.menuOpen,
       });
@@ -105,7 +104,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       });
     }
     const handleNativeWheel = (event: WheelEvent) => {
-      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? runtime.current.storyHeight : 1;
       arbitrateGesture(event.deltaX * unit, event.deltaY * unit, event);
     };
     if (reducedMotion) window.addEventListener('wheel', handleNativeWheel, { passive: false });
@@ -114,11 +113,11 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
     lenis?.on('scroll', ScrollTrigger.update);
     if (lenis) gsap.ticker.add(advanceScrollClock);
     const updateProgress = () => {
-      runtime.current.progress = storyProgress(window.scrollY, window.innerHeight);
+      runtime.current.progress = storyProgress(window.scrollY, runtime.current.storyHeight);
     };
     const trigger = ScrollTrigger.create({
       start: 0,
-      end: () => SCROLL_SCREENS * window.innerHeight,
+      end: () => SCROLL_SCREENS * runtime.current.storyHeight,
       onUpdate: updateProgress,
       onRefresh: updateProgress,
     });
@@ -130,7 +129,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
     const commitSignalNavigation = () => {
       if (!pending || committed) return;
       committed = true;
-      const top = sceneScrollTop(pending.id, window.innerHeight);
+      const top = sceneScrollTop(pending.id, runtime.current.storyHeight);
       if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
       else window.scrollTo({ top, behavior: 'instant' });
       syncProgress();
@@ -177,8 +176,8 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
         // Repeated clicks do not restart the same journey. A reverse click uses
         // the live scroll position with the same curve, even before scene handoff.
         if (monitorTarget === request.id) return;
-        const from = monitorTarget ?? getSceneState(storyProgress(window.scrollY, window.innerHeight)).scene.id;
-        const journey = monitorMenuTransition(from, request.id, window.innerHeight);
+        const from = monitorTarget ?? getSceneState(storyProgress(window.scrollY, runtime.current.storyHeight)).scene.id;
+        const journey = monitorMenuTransition(from, request.id, runtime.current.storyHeight);
         if (journey) {
           // Cancel a reversal even when no animation frame has moved yet; Lenis
           // otherwise treats the current position as an already-reached target.
@@ -230,14 +229,18 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
     window.addEventListener('touchmove', blockNavigationTouch, { passive: false });
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const refreshLayout = () => {
+    const refreshLayout = (event?: Event) => {
       if (disposed) return;
-      const next = { width: window.innerWidth, height: window.innerHeight };
-      const top = resizeScrollTarget(window.scrollY, viewport, next);
-      if (next.width !== viewport.width || next.height !== viewport.height) gesture = createIntroGestureState();
+      const next = { width: window.innerWidth, height: runtime.current.storyHeight };
+      const scroll = event instanceof CustomEvent ? (event.detail as { scroll: number }).scroll : window.scrollY;
+      const top = resizeScrollTarget(scroll, viewport, next);
+      // A toolbar resize must not reset native inertia, gesture latches or a
+      // menu journey. Lenis observes the visible scroll limit independently.
+      if (top === null) return;
+      gesture = createIntroGestureState();
       viewport = next;
       lenis?.resize();
-      if (top !== null) {
+      if (!document.querySelector('.experience')?.classList.contains('is-fallback')) {
         monitorTarget = null;
         if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
         else window.scrollTo({ top, behavior: 'instant' });
@@ -245,19 +248,12 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       ScrollTrigger.refresh();
       syncProgress();
     };
-    const scheduleLayoutRefresh = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(refreshLayout, 150);
-    };
-    window.addEventListener('resize', scheduleLayoutRefresh);
-    window.addEventListener('study-layout-change', scheduleLayoutRefresh);
-    document.fonts.ready.then(refreshLayout);
+    window.addEventListener('study-layout-change', refreshLayout);
     // The trigger's initial refresh supplies restored scroll progress as well.
     trigger.refresh();
 
     return () => {
       disposed = true;
-      clearTimeout(resizeTimer);
       completeSignal();
       signalTimeline?.kill();
       trigger.kill();
@@ -270,8 +266,7 @@ export function SmoothScroll({ runtime, reducedMotion }: SmoothScrollProps) {
       window.removeEventListener('keydown', blockNavigationKey);
       window.removeEventListener('touchmove', blockNavigationTouch);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('resize', scheduleLayoutRefresh);
-      window.removeEventListener('study-layout-change', scheduleLayoutRefresh);
+      window.removeEventListener('study-layout-change', refreshLayout);
     };
   }, [reducedMotion, runtime]);
   return null;

@@ -6,7 +6,8 @@
 
 @media(max-width:899px){.hero-scroll-control{top:38%;left:5%;width:90%;height:58px}.project-controls{inset:auto 7% 5%}.project-controls button{width:50px;height:50px}.is-fallback .scroll-story{padding-top:10px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}
-.experience{position:relative}.project-controls button{width:54px;height:54px}
+.experience{position:relative;overflow-anchor:none}.project-controls button{width:54px;height:54px}
+.last-viewport{height:var(--visible-viewport-height,100vh)}
 
 .experience:not(.is-fallback) .semantic-copy:focus-within{position:fixed;left:24px;right:24px;bottom:24px;z-index:20;width:auto;height:auto;clip:auto;white-space:normal;padding:20px;background:#14111f;border:1px solid #cdbf79}.experience:not(.is-fallback) .semantic-copy:focus-within h1{font-size:28px}.experience:not(.is-fallback) .semantic-copy:focus-within p{font:14px/1.5 system-ui;margin:12px 0}.experience:not(.is-fallback) .semantic-copy:focus-within button{padding:10px 14px;background:#302f9e;border:1px solid #eee9dc66}
 

@@ -16,6 +16,7 @@ import { navigationLayout, navigationSection, type NavigationLayout, type Naviga
 import { shouldUseMenuSignal, type MenuNavigationRequest } from './scene/menu-navigation';
 import { contactLayout } from './scene/contact-layout';
 import { projectCaptionLayout } from './scene/project-caption-layout';
+import { storyViewport } from './scene/viewport-resize';
 
 const SceneCanvas = dynamic(() => import('./scene/scene-canvas'), { ssr: false });
 gsap.registerPlugin(useGSAP);
@@ -87,14 +88,29 @@ export function WorkspacePreview() {
   }, [fallback]);
 
   useLayoutEffect(() => {
-    const resizeContactSection = () => {
-      const { travel } = contactLayout(window.innerWidth, window.innerHeight);
-      container.current?.style.setProperty('--contact-scroll-height', `${Math.ceil(travel) + 3}px`);
-      window.dispatchEvent(new Event('study-layout-change'));
+    let viewport = { width: window.innerWidth, height: window.innerHeight };
+    let contactTravel = 0;
+    const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    const resizeStory = () => {
+      const scroll = window.scrollY;
+      const visible = { width: window.innerWidth, height: window.innerHeight };
+      const next = storyViewport(viewport, visible, touch);
+      if (next.width !== viewport.width || next.height !== viewport.height) contactTravel = 0;
+      viewport = next;
+      runtime.current.storyHeight = viewport.height;
+      container.current?.style.setProperty('--story-viewport-height', `${viewport.height}px`);
+      container.current?.style.setProperty('--visible-viewport-height', `${window.innerHeight}px`);
+      // Chrome may shrink a page opened with the toolbar hidden. Reserve enough
+      // travel for the footer, but never shrink that range underneath the reader.
+      contactTravel = Math.max(contactTravel, contactLayout(visible.width, visible.height).travel);
+      container.current?.style.setProperty('--contact-scroll-height', `${Math.ceil(contactTravel) + 3}px`);
+      // Capture before changing document height: rotation can otherwise clamp
+      // the old position before the scroll owner gets a chance to preserve it.
+      window.dispatchEvent(new CustomEvent('study-layout-change', { detail: { scroll } }));
     };
-    resizeContactSection();
-    window.addEventListener('resize', resizeContactSection, { passive: true });
-    return () => window.removeEventListener('resize', resizeContactSection);
+    resizeStory();
+    window.addEventListener('resize', resizeStory, { passive: true });
+    return () => window.removeEventListener('resize', resizeStory);
   }, []);
 
   useEffect(() => {
@@ -196,7 +212,7 @@ export function WorkspacePreview() {
     window.addEventListener('blur', resetPointer);
     const syncSceneControls = () => {
       if (!container.current) return;
-      const state = getSceneState(storyProgress(window.scrollY, window.innerHeight));
+      const state = getSceneState(storyProgress(window.scrollY, runtime.current.storyHeight));
       const sceneId = fallback
         ? scenes.findLast(scene => (document.getElementById(scene.id)?.getBoundingClientRect().top ?? Infinity) <= 100)?.id ?? 'hero'
         : state.scene.id;
@@ -209,7 +225,7 @@ export function WorkspacePreview() {
       container.current.dataset.projectExiting = String(state.scene.id === 'projects' && aperture > 0);
       if (projectControls.current) projectControls.current.inert = !fallback && (state.scene.id !== 'projects' || aperture > 0);
       if (contactControls.current) {
-        const layout = contactLayout(window.innerWidth, window.innerHeight, state.localProgress);
+        const layout = contactLayout(window.innerWidth, window.innerHeight, state.localProgress, runtime.current.storyHeight);
         for (const link of contactControls.current.querySelectorAll<HTMLAnchorElement>('a')) {
           const bounds = link.dataset.contactAction === 'github' ? layout.github : layout.invitation;
           Object.assign(link.style, {
@@ -261,7 +277,7 @@ export function WorkspacePreview() {
     pendingNavigationFocus.current = menuWasOpen && !signal ? id : null;
     closeMenu();
     const section = fallback ? document.getElementById(id) : null;
-    const top = section ? window.scrollY + section.getBoundingClientRect().top : sceneScrollTop(id, window.innerHeight);
+    const top = section ? window.scrollY + section.getBoundingClientRect().top : sceneScrollTop(id, runtime.current.storyHeight);
     window.dispatchEvent(new CustomEvent<MenuNavigationRequest>('study-navigate', {
       detail: {
         top,
@@ -494,7 +510,7 @@ export function WorkspacePreview() {
         tabIndex={-1}
         key={scene.id}
         className={`scene-section scene-${scene.id}`}
-        style={{ height: scene.id === 'contact' ? 'var(--contact-scroll-height, 3px)' : `${(scene.end - scene.start) * SCROLL_SCREENS * 100}vh` }}
+        style={{ height: scene.id === 'contact' ? 'var(--contact-scroll-height, 3px)' : `calc(${(scene.end - scene.start) * SCROLL_SCREENS} * var(--story-viewport-height, 100vh))` }}
         aria-labelledby={`${scene.id}-title`}
       >
         <div className="semantic-copy">
