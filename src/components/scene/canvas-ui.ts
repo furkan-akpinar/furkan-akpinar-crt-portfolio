@@ -1,7 +1,7 @@
 import { CanvasTexture, LinearFilter, SRGBColorSpace } from "three/webgpu";
 import { portfolio } from "@/content/portfolio";
 import { contactLayout } from "./contact-layout";
-import { heroPromptLayout } from "./hero-copy-layout";
+import { heroPromptLayout, mobileHeroLayout } from "./hero-copy-layout";
 import { navigationLayout, type NavigationSection } from "./navigation-layout";
 import { curlCovers } from "./page-curl-geometry";
 import { projectCaptionLayout } from "./project-caption-layout";
@@ -247,7 +247,8 @@ export function createCanvasUI(width: number, height: number) {
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = mobile ? "center" : "left";
     // Keep the four-line composition; fit the longer Turkish words to its column.
-    let fontSize = mobile ? Math.min(44, logicalWidth * 0.113) : 96 * Math.min(scale, 1);
+    const mobileLayout = mobileHeroLayout(logicalHeight);
+    let fontSize = mobile ? Math.min(44, logicalWidth * 0.113) * mobileLayout.scale : 96 * Math.min(scale, 1);
     const lines = mobile ? portfolio.heroLinesMobile : portfolio.heroLinesDesktop;
     ctx.font = `${mobile ? 400 : 500} ${fontSize}px ${SERIF}`;
     ctx.letterSpacing = `${mobile ? 0.5 : 0.25 * scale}px`;
@@ -257,14 +258,11 @@ export function createCanvasUI(width: number, height: number) {
     ctx.font = `${mobile ? 400 : 500} ${fontSize}px ${SERIF}`;
     const desktopScale=Math.min(scale,1),extraHeight=Math.max(0,logicalHeight-900);
     const x = mobile ? logicalWidth * 0.5 : 96*desktopScale+Math.max(0,logicalWidth-1440)*0.15;
-    const firstBaseline = mobile ? 143 : 265*desktopScale+extraHeight*0.455;
-    const lineHeight = mobile ? 49 : 100*desktopScale;
+    const firstBaseline = mobile ? mobileLayout.firstBaseline : 265*desktopScale+extraHeight*0.455;
+    const lineHeight = mobile ? mobileLayout.lineHeight : 100*desktopScale;
     lines.forEach((line, index) => ctx.fillText(line, x, firstBaseline + index * lineHeight));
 
     ctx.letterSpacing = "0px";
-    ctx.font = `400 ${mobile ? 18 : 22*desktopScale}px ${SERIF}`;
-    wrapped(portfolio.home.description, x, mobile ? 332 : 626*desktopScale+extraHeight*0.51,
-      mobile ? Math.min(logicalWidth-42, 540) : 610*desktopScale, mobile ? 23 : 29*desktopScale);
     const prompt = heroPromptLayout(logicalWidth, logicalHeight);
     ctx.font = `400 ${prompt.fontSize}px ${SERIF}`;
     const promptY = prompt.baseline;

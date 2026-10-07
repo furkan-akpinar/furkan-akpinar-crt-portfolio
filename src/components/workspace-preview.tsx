@@ -503,9 +503,7 @@ export function WorkspacePreview() {
           </h1> : <h2 id={`${scene.id}-title`}>
             {scene.label}
           </h2>}
-          {index === 0 ? <p>
-            {portfolio.home.description}
-          </p> : index === 1 ? <>
+          {index === 0 ? null : index === 1 ? <>
             <p>{portfolio.projectsIntro}</p>
             <h3>{portfolio.projects[projectIndex].title}</h3>
           </> : scene.id === 'about-us' ? <>
