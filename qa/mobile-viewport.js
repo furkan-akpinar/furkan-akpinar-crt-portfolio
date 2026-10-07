@@ -188,7 +188,7 @@ async page => {
       const fingerTravel = stop.name === 'aperture' ? 60 : 160;
       await swipe(650, 650 - fingerTravel);
       const forward = await snapshot();
-      const apertureGain = (Math.ceil(5.6 * before.storyHeight) + 2 - Math.floor(1.42 * before.storyHeight)) / (0.6 * before.storyHeight);
+      const apertureGain = (Math.ceil(5.6 * before.storyHeight) + 2 - Math.floor(1.42 * before.storyHeight)) / (0.75 * before.storyHeight);
       check(`${stop.name}: forward controlled swipe`, forward.scrollPosition > before.scrollPosition + 20 && forward.scene === stop.scene
         && (stop.name !== 'aperture' || (forward.projectExit > before.projectExit && forward.projectExit < 1
           && Math.abs(forward.scrollPosition - before.scrollPosition - fingerTravel * apertureGain) <= 2)), { before, forward, fingerTravel });

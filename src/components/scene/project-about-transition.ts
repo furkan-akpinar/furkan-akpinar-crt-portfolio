@@ -5,8 +5,8 @@ import { SCROLL_SCREENS } from './runtime.ts';
 export const PROJECT_ABOUT_START_VH = 1.42;
 export const PROJECT_ABOUT_END_VH = 5.6;
 export const PROJECT_ABOUT_STEPS = 7;
-/** A full reveal follows 60% of the viewport in finger travel, in either direction. */
-export const PROJECT_ABOUT_TOUCH_DISTANCE_VH = .6;
+/** Viewport fraction of finger travel for a full reveal; larger values feel slower. */
+export const PROJECT_ABOUT_TOUCH_DISTANCE_VH = .75;
 export const PROJECT_ABOUT_REST_TOLERANCE_VH = .002;
 
 /** Absolute scroll sampling makes a stopped or reversed aperture deterministic. */

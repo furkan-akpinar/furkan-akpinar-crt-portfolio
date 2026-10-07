@@ -166,7 +166,7 @@ async page => {
     { releasedPartial, resumed });
     await mobile.waitForTimeout(1700);
     const releasedResume = await snapshot();
-    const expectedResumed = releasedPartial.scrollPosition + 60 * (aboutStart - apertureStart) / (0.6 * apertureBefore.storyHeight);
+    const expectedResumed = releasedPartial.scrollPosition + 60 * (aboutStart - apertureStart) / (0.75 * apertureBefore.storyHeight);
     check('quickly released partial aperture has no momentum', Math.abs(resumed.scrollPosition - expectedResumed) <= 2
       && stationary(resumed, releasedResume), { resumed, releasedResume, expectedResumed });
     await touchDown(700);
@@ -177,7 +177,7 @@ async page => {
 
     await hold(1.42);
     await touchDown(800);
-    const fullTravel = 0.6 * apertureBefore.storyHeight + 1;
+    const fullTravel = 0.75 * apertureBefore.storyHeight + 1;
     for (let step = 1; step <= 8; step++) apertureSamples.push(await touchMove(800 - fullTravel * step / 8));
     const apertureComplete = apertureSamples[apertureSamples.length - 1];
     check('one continuous drag completes the aperture', apertureComplete.scene === 'about-us'

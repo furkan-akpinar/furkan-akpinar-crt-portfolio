@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createIntroGestureState, reduceIntroGesture, type IntroGestureInput } from '../src/components/scene/intro-gesture.ts';
+import { PROJECT_ABOUT_TOUCH_DISTANCE_VH } from '../src/components/scene/project-about-transition.ts';
 
 const wheel = (values: Partial<IntroGestureInput> = {}): IntroGestureInput => ({
   deltaX: 0, deltaY: 100, time: 0, scroll: 0, viewportHeight: 1000, ready: true, menuOpen: false, ...values,
@@ -109,7 +110,7 @@ test('invalid geometry cannot produce a nonfinite target and zero events do not 
 test('mobile aperture follows finger distance equally forward and backward at every viewport', () => {
   for (const height of [440, 820, 844, 956]) {
     const start = Math.floor(1.42 * height), end = Math.ceil(5.6 * height) + 2;
-    const gain = (end - start) / (.6 * height);
+    const gain = (end - start) / (PROJECT_ABOUT_TOUCH_DISTANCE_VH * height);
     const origin = start + (end - start) * .3;
     const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: origin, viewportHeight: height, deltaY: 40 }));
     assert.equal(forward.action.type, 'scrub');
@@ -123,10 +124,11 @@ test('mobile aperture follows finger distance equally forward and backward at ev
 
 test('a full mobile drag is bounded to the aperture and can reverse before release', () => {
   const start = 1420, end = 5602;
+  const fullDrag = 1000 * PROJECT_ABOUT_TOUCH_DISTANCE_VH;
   for (const scroll of [1402, start, 3000, 4700]) {
-    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, deltaY: 600 }));
+    const forward = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll, deltaY: fullDrag }));
     assert.deepEqual(forward.action, { type: 'scrub', top: end });
-    const reverse = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: end, deltaY: -600 }));
+    const reverse = reduceIntroGesture(forward.state, wheel({ touch: true, scroll: end, deltaY: -fullDrag }));
     assert.deepEqual(reverse.action, { type: 'scrub', top: start });
     const held = reduceIntroGesture(reverse.state, wheel({ touch: true, scroll: start, deltaY: -100 }));
     assert.deepEqual(held.action, { type: 'scrub', top: start }, 'same finger must not escape to Hero');
@@ -149,9 +151,10 @@ test('short touch stops partially and a fresh gesture resumes from that position
 });
 
 test('entering the aperture from About accelerates only the distance inside its boundary', () => {
+  const fullDrag = 1000 * PROJECT_ABOUT_TOUCH_DISTANCE_VH;
   assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5802, deltaY: -100 })).action.type, 'pass');
   const crossed = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5802, deltaY: -260 }));
-  assert.deepEqual(crossed.action, { type: 'scrub', top: 5602 - 60 * (5602 - 1420) / 600 });
+  assert.deepEqual(crossed.action, { type: 'scrub', top: 5602 - 60 * (5602 - 1420) / fullDrag });
   const menu = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 5602, deltaY: -60 }));
   assert.deepEqual(menu.action, crossed.action);
 });
