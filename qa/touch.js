@@ -39,6 +39,7 @@ async page => {
         storyHeight: window.__sceneDiagnostics?.storyHeight, sceneHeight: window.__sceneDiagnostics?.sceneHeight,
         scene: window.__sceneDiagnostics?.scene, activeIndex: window.__sceneDiagnostics?.ring.activeIndex,
         projectMotion: window.__sceneDiagnostics?.projectMotion, projectExit: window.__sceneDiagnostics?.projectExit,
+        aperture: window.__sceneDiagnostics?.aperture,
         canvas: canvas ? { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } : null,
       };
     });
@@ -140,7 +141,10 @@ async page => {
       apertureFingerHeld = false;
     };
     const stationary = (a, b) => Math.abs(a.scrollPosition - b.scrollPosition) <= 2
-      && a.scene === b.scene && Math.abs(a.projectExit - b.projectExit) < 0.001;
+      && a.scene === b.scene && Math.abs(a.projectExit - b.projectExit) < 0.001
+      && a.aperture && b.aperture
+      && ['radius', 'exposure', 'glow', 'centerX', 'centerY', 'phase7', 'phase13', 'clock']
+        .every(key => Math.abs(a.aperture[key] - b.aperture[key]) < 0.001);
     const apertureStart = Math.floor(1.42 * apertureBefore.storyHeight);
     const aboutStart = Math.ceil(5.6 * apertureBefore.storyHeight) + 2;
     const apertureSamples = [];
