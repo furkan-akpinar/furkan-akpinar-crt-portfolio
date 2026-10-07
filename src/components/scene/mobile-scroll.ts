@@ -59,6 +59,7 @@ type Finger = {
   lastMovement: number;
   velocity: number;
   axis: 'x' | 'y' | null;
+  consumed: boolean;
 };
 
 /** Owns numeric scene distance only. It never reads or writes document scroll. */
@@ -83,6 +84,7 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
 
   function scrollTo(top: number, options: ScrollToOptions = {}) {
     if (destroyed || !Number.isFinite(top) || ((stopped || locked) && !options.force)) return;
+    if (options.lock && finger) finger.consumed = true;
     cancelAnimation();
     const destination = clampMobileScroll(top, limit());
     const duration = Number.isFinite(options.duration) ? Math.max(0, options.duration!) : 0.9;
@@ -117,7 +119,7 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
     const touch = event.touches[0];
     const now = performance.now();
     finger = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY,
-      lastY: touch.clientY, lastTime: now, lastMovement: now, velocity: 0, axis: null };
+      lastY: touch.clientY, lastTime: now, lastMovement: now, velocity: 0, axis: null, consumed: locked || stopped };
   }
 
   function touchMove(event: TouchEvent) {
@@ -138,7 +140,7 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
     finger.lastTime = now;
     // Horizontal project swipes belong exclusively to WorkspacePreview's
     // pointerup handler. Do not also dispatch the reducer's gallery action.
-    if (finger.axis === 'x' || stopped || locked) {
+    if (finger.consumed || finger.axis === 'x' || stopped || locked) {
       finger.velocity = 0;
       return;
     }
@@ -157,7 +159,7 @@ export function createMobileScroll({ target, read, write, limit, reducedMotion, 
   function touchEnd(event: TouchEvent) {
     const released = finger;
     finger = null;
-    if (!released || zoomed() || event.touches.length > 0 || released.axis !== 'y' || stopped || locked || reducedMotion) return;
+    if (!released || released.consumed || zoomed() || event.touches.length > 0 || released.axis !== 'y' || stopped || locked || reducedMotion) return;
     const momentum = mobileScrollMomentum(position(), released.velocity, performance.now() - released.lastMovement, limit());
     if (momentum.duration) scrollTo(momentum.top, { duration: momentum.duration, programmatic: false });
   }

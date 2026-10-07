@@ -174,3 +174,20 @@ test('rotation discards coordinates from a finger still held in the old viewport
     assert.equal(read(), 200);
   });
 });
+
+
+test('a locked immediate journey consumes the current finger through release, including reduced motion', () => {
+  withTouchDriver(({ driver, read, touch }) => {
+    touch('touchstart', [[200, 500]]);
+    driver.scrollTo(600, { lock: true, immediate: true, force: true });
+    assert.equal(read(), 600);
+    touch('touchmove', [[200, 400]]);
+    touch('touchmove', [[200, 450]]);
+    touch('touchend', []);
+    assert.equal(read(), 600, 'the original finger cannot overshoot or reverse a completed journey');
+    touch('touchstart', [[200, 500]]);
+    touch('touchmove', [[200, 450]]);
+    touch('touchend', []);
+    assert.equal(read(), 650, 'a new gesture regains control');
+  });
+});

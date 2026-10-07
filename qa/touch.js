@@ -5,10 +5,14 @@ async page => {
   const planned = ['DPR 3 touch device uses mobile model', 'GPU resolution stays at the 1.5 DPR cap', 'mobile never downloads 4K textures',
     ...['projects', 'about-us', 'contact', 'hero'].map(scene => `touch menu ${scene}`),
     'controlled touch swipe enters projects', 'one horizontal gesture advances exactly one project', 'one reverse horizontal gesture returns exactly one project',
-    'horizontal gestures preserve the story position', 'controlled touch swipe returns to hero',
+    'horizontal gestures preserve the story position',
+    'one touch swipe animates the aperture at 150ms', 'one touch swipe advances the aperture at 650ms',
+    'one touch swipe completes About by 1700ms', 'held aperture finger cannot overscroll after completion',
+    'fresh touch swipe resumes About scrolling', 'aperture gesture keeps the root locked and canvas stable',
+    'controlled touch swipe returns to hero',
     'wide rotation retains mobile textures', 'no second model requested after rotation', 'all mobile stages keep the root document locked',
     'touch context has no page errors', 'touch scenario completed'];
-  let completed = false;
+  let completed = false, apertureFingerHeld = false;
   const emulation = await context.newCDPSession(mobile);
   const originalAgent = await mobile.evaluate(() => navigator.userAgent);
   await mobile.setViewportSize({width:440,height:956});
@@ -21,13 +25,17 @@ async page => {
   mobile.on('pageerror', onPageError);
   mobile.on('request', onRequest);
   const snapshot = async () => {
-    const state = await mobile.evaluate(() => ({
-      scrollY, height: innerHeight, documentHeight: document.documentElement.scrollHeight,
-      scrollPosition: window.__sceneDiagnostics?.scrollPosition, scrollMode: window.__sceneDiagnostics?.scrollMode,
-      storyHeight: window.__sceneDiagnostics?.storyHeight, sceneHeight: window.__sceneDiagnostics?.sceneHeight,
-      scene: window.__sceneDiagnostics?.scene, activeIndex: window.__sceneDiagnostics?.ring.activeIndex,
-      projectMotion: window.__sceneDiagnostics?.projectMotion,
-    }));
+    const state = await mobile.evaluate(() => {
+      const canvas = document.querySelector('.scene-canvas canvas')?.getBoundingClientRect();
+      return {
+        time: performance.now(), scrollY, height: innerHeight, documentHeight: document.documentElement.scrollHeight,
+        scrollPosition: window.__sceneDiagnostics?.scrollPosition, scrollMode: window.__sceneDiagnostics?.scrollMode,
+        storyHeight: window.__sceneDiagnostics?.storyHeight, sceneHeight: window.__sceneDiagnostics?.sceneHeight,
+        scene: window.__sceneDiagnostics?.scene, activeIndex: window.__sceneDiagnostics?.ring.activeIndex,
+        projectMotion: window.__sceneDiagnostics?.projectMotion, projectExit: window.__sceneDiagnostics?.projectExit,
+        canvas: canvas ? { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } : null,
+      };
+    });
     rootSamples.push(state);
     return state;
   };
@@ -108,6 +116,62 @@ async page => {
       && horizontalReverse.activeIndex === horizontalBefore.activeIndex, { horizontalBefore, horizontalReverse });
     check('horizontal gestures preserve the story position', [horizontalAfter, horizontalSettled, horizontalReverse].every(state => state.scene === 'projects'
       && Math.abs(state.scrollPosition - horizontalBefore.scrollPosition) <= 2), { horizontalBefore, horizontalAfter, horizontalSettled, horizontalReverse });
+
+    // Keep one finger down beyond the complete transition. This exposes a driver
+    // that resumes the same drag as soon as its animation lock expires.
+    const apertureBefore = await hold(1.42);
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 220, y: 760 }] });
+    apertureFingerHeld = true;
+    const apertureStarted = await mobile.evaluate(() => performance.now());
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 700 }] });
+    const sampleApertureAt = async milliseconds => {
+      const remaining = await mobile.evaluate(start => start - performance.now(), apertureStarted + milliseconds);
+      if (remaining > 0) await mobile.waitForTimeout(remaining);
+      const state = await snapshot();
+      return { ...state, elapsed: state.time - apertureStarted };
+    };
+    const aperture150 = await sampleApertureAt(150);
+    const aperture650 = await sampleApertureAt(650);
+    const apertureComplete = await sampleApertureAt(1700);
+    const aboutStart = Math.ceil(5.6 * apertureBefore.storyHeight) + 2;
+    check('one touch swipe animates the aperture at 150ms', aperture150.scene === 'projects'
+      && aperture150.scrollPosition > apertureBefore.scrollPosition + 2 && aperture150.scrollPosition < aboutStart - 2
+      && aperture150.projectExit > 0 && aperture150.projectExit < 1, { apertureBefore, aperture150 });
+    check('one touch swipe advances the aperture at 650ms', aperture650.scene === 'projects'
+      && aperture650.scrollPosition > aperture150.scrollPosition + 2 && aperture650.scrollPosition < aboutStart - 2
+      && aperture650.projectExit > aperture150.projectExit && aperture650.projectExit < 1, { aperture150, aperture650 });
+    check('one touch swipe completes About by 1700ms', apertureComplete.scene === 'about-us'
+      && Math.abs(apertureComplete.scrollPosition - aboutStart) <= 2,
+    { apertureBefore, aperture150, aperture650, apertureComplete, aboutStart });
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 520 }] });
+    await mobile.waitForTimeout(250);
+    const apertureHeldForward = await snapshot();
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 220, y: 600 }] });
+    await mobile.waitForTimeout(250);
+    const apertureHeldReverse = await snapshot();
+    await emulation.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    apertureFingerHeld = false;
+    await mobile.waitForTimeout(600);
+    const apertureReleased = await snapshot();
+    check('held aperture finger cannot overscroll after completion', [apertureHeldForward, apertureHeldReverse, apertureReleased].every(state => state.scene === 'about-us'
+      && Math.abs(state.scrollPosition - apertureComplete.scrollPosition) <= 2),
+    { apertureComplete, apertureHeldForward, apertureHeldReverse, apertureReleased });
+    await swipe({ x: 220, y: 760 }, { x: 220, y: 600 });
+    await mobile.waitForTimeout(600);
+    const freshAbout = await snapshot();
+    check('fresh touch swipe resumes About scrolling', freshAbout.scene === 'about-us'
+      && freshAbout.scrollPosition > apertureReleased.scrollPosition + 20, { apertureReleased, freshAbout });
+    const apertureSamples = [aperture150, aperture650, apertureComplete, apertureHeldForward, apertureHeldReverse, apertureReleased, freshAbout];
+    check('aperture gesture keeps the root locked and canvas stable', apertureBefore.canvas
+      && apertureSamples.every(state => state.scrollMode === 'controlled' && state.scrollY === 0 && state.documentHeight <= state.height
+        && state.sceneHeight === apertureBefore.sceneHeight && state.canvas
+        && ['x', 'y', 'width', 'height'].every(key => Math.abs(state.canvas[key] - apertureBefore.canvas[key]) < 0.5)),
+    { apertureBefore, apertureSamples });
+
+    // Return through the menu so the hero reverse check starts at the film's
+    // resting position, independent of the completed aperture and About swipe.
+    await navigate('Projeler', 'projects');
+    await snapshot();
     await swipe({ x: 220, y: 400 }, { x: 220, y: 760 });
     await mobile.waitForFunction(() => window.__sceneDiagnostics.scene === 'hero' && window.__sceneDiagnostics.scrollPosition < 2, null, { timeout: 15000 });
     check('controlled touch swipe returns to hero', (await snapshot()).scrollMode === 'controlled');
@@ -124,6 +188,7 @@ async page => {
   finally {
     mobile.off('pageerror', onPageError);
     mobile.off('request', onRequest);
+    if (apertureFingerHeld) await emulation.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await emulation.send('Emulation.clearDeviceMetricsOverride');
     await emulation.send('Emulation.setTouchEmulationEnabled',{enabled:false});
     await emulation.send('Emulation.setUserAgentOverride',{userAgent:originalAgent});

@@ -1,4 +1,4 @@
-import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS } from './project-about-transition.ts';
+import { PROJECT_ABOUT_START_VH, PROJECT_ABOUT_END_VH, PROJECT_ABOUT_STEPS, PROJECT_ABOUT_TOUCH_DURATION } from './project-about-transition.ts';
 import { ABOUT_CURL_START_VH, ABOUT_CURL_END_VH, ABOUT_CURL_DURATION, nextCurlTargetVh } from '../../lib/about-curl.ts';
 
 /** Wheel arbitration only: the caller owns Lenis, gallery changes, and navigation.
@@ -14,6 +14,8 @@ export interface IntroGestureInput {
   menuOpen: boolean;
   /** Zero or omitted for continuous trackpad/touch input. */
   wheelSteps?: number;
+  /** A single-finger vertical drag owns the full Projects → About reveal. */
+  touch?: boolean;
 }
 
 export interface IntroGestureConfig {
@@ -49,7 +51,7 @@ export const introSnapEase = (t: number) => t * t * (3 - 2 * t);
 
 type Axis = 'x' | 'y';
 type Direction = 1 | -1;
-type Latch = { type: 'snap'; targetVh: number; startedAt: number }
+type Latch = { type: 'snap'; targetVh: number; startedAt: number; durationMs?: number }
   | { type: 'gallery'; startedAt: number };
 
 export interface IntroGestureState {
@@ -97,7 +99,7 @@ export function reduceIntroGesture(
 
   if (state.latch?.type === 'snap') {
     const settled = Math.abs(input.scroll - state.latch.targetVh * input.viewportHeight) <= config.settleTolerancePx;
-    const elapsed = input.time - state.latch.startedAt >= config.snapDurationMs;
+    const elapsed = input.time - state.latch.startedAt >= (state.latch.durationMs ?? config.snapDurationMs);
     if (!(settled && elapsed && quiet)) return { state, action: { type: 'block' } };
     state.latch = null;
     state.accumulated = 0;
@@ -115,6 +117,20 @@ export function reduceIntroGesture(
   state.axis = axis;
   state.direction = direction;
   state.accumulated += Math.abs(delta);
+
+  // A deliberate mobile swipe completes this authored reveal. The menu can
+  // land just before the film's 1.42vh rest pose, so include the section start.
+  if (input.touch && axis === 'y' && direction > 0
+    && vh >= config.projectsStartVh && vh < PROJECT_ABOUT_END_VH) {
+    if (state.accumulated < config.triggerPx) return { state, action: { type: 'block' } };
+    state.accumulated = 0;
+    state.apertureTargetVh = state.curlTargetVh = null;
+    state.latch = { type: 'snap', targetVh: PROJECT_ABOUT_END_VH, startedAt: input.time,
+      durationMs: PROJECT_ABOUT_TOUCH_DURATION * 1000 };
+    return { state, action: { type: 'snap',
+      top: Math.ceil(PROJECT_ABOUT_END_VH * input.viewportHeight) + 2,
+      duration: PROJECT_ABOUT_TOUCH_DURATION } };
+  }
 
   const entering = axis === 'y' && direction > 0 && vh < config.heroMaxVh;
   const restToleranceVh = config.settleTolerancePx / input.viewportHeight;

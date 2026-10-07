@@ -104,3 +104,38 @@ test('invalid geometry cannot produce a nonfinite target and zero events do not 
   const first = reduceIntroGesture(createIntroGestureState(), wheel()).state;
   assert.equal(reduceIntroGesture(first, wheel({ deltaY: 0, time: 1100 })).state, first);
 });
+
+
+test('one deliberate touch completes Projects to About from menu, resting film and partial reveal', () => {
+  for (const height of [440, 820, 844, 956]) {
+    for (const vh of [1.4 + 2 / height, 1.42, 3, 4.7, 5.59]) {
+      const result = reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: vh * height, viewportHeight: height, deltaY: 16 }));
+      assert.deepEqual(result.action, { type: 'snap', top: Math.ceil(5.6 * height) + 2, duration: 1.4 });
+    }
+  }
+});
+
+test('touch reveal ignores jitter then accumulates a single deliberate forward drag', () => {
+  let state = createIntroGestureState();
+  for (const [index, deltaY] of [4, 4, 4].entries()) {
+    const result = reduceIntroGesture(state, wheel({ touch: true, scroll: 1420, deltaY, time: index * 20 }));
+    assert.equal(result.action.type, index === 2 ? 'snap' : 'block');
+    state = result.state;
+  }
+  const during = reduceIntroGesture(state, wheel({ touch: true, scroll: 3000, time: 500 }));
+  assert.equal(during.action.type, 'block');
+  const settled = reduceIntroGesture(during.state, wheel({ touch: true, scroll: 5602, time: 1440 }));
+  assert.equal(settled.action.type, 'pass', 'a new drag can scroll About once the 1.4s journey is settled');
+});
+
+test('touch reveal does not change hero, backward drag, About reading or horizontal gallery behavior', () => {
+  assert.deepEqual(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true })).action,
+    { type: 'snap', top: 1420, duration: 1.5 });
+  for (const values of [{ scroll: 4700, deltaY: -100 }, { scroll: 5602 }, { scroll: 7500 }]) {
+    assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, ...values })).action.type, 'pass');
+  }
+  assert.deepEqual(reduceIntroGesture(createIntroGestureState(), wheel({ touch: true, scroll: 1420, deltaX: 100, deltaY: 1 })).action,
+    { type: 'gallery', direction: 1 });
+  assert.equal(reduceIntroGesture(createIntroGestureState(), wheel({ scroll: 1420, deltaY: 16 })).action.type, 'pass',
+    'desktop continuous input keeps its existing distance-driven behavior');
+});

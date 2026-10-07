@@ -5,6 +5,7 @@ import { SCROLL_SCREENS } from './runtime.ts';
 export const PROJECT_ABOUT_START_VH = 1.42;
 export const PROJECT_ABOUT_END_VH = 5.6;
 export const PROJECT_ABOUT_STEPS = 7;
+export const PROJECT_ABOUT_TOUCH_DURATION = 1.4;
 export const PROJECT_ABOUT_REST_TOLERANCE_VH = .002;
 
 /** Absolute scroll sampling makes a stopped or reversed aperture deterministic. */

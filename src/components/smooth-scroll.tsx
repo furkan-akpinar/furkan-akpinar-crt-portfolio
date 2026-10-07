@@ -64,6 +64,7 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
         deltaX,
         deltaY,
         wheelSteps,
+        touch: controlled && event.type === 'touchmove',
         time: performance.now(),
         scroll: readScroll(),
         viewportHeight: data.storyHeight,
@@ -89,6 +90,7 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
           window.scrollTo({ top: result.action.top, behavior: 'instant' });
         }
       }
+      if (result.action.type === 'snap' && controlled && reducedMotion) gesture = createIntroGestureState();
       if (result.action.type === 'aperture' || result.action.type === 'curl') {
         // A new detent may retarget or reverse immediately; this is not a lock.
         if (driver) {
