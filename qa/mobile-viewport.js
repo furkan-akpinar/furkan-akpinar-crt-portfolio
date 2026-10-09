@@ -43,6 +43,11 @@ async page => {
       screenOrientation: { type: width > height ? 'landscapePrimary' : 'portraitPrimary', angle: width > height ? 90 : 0 },
     });
   };
+  // These checks time viewport/scroll behavior after destinations are ready.
+  // startup.js separately verifies navigation while secondary content is loading.
+  const ready = () => page.waitForFunction(() => document.querySelector('.is-ready')
+    && window.__sceneDiagnostics?.intro === 1 && window.__sceneDiagnostics.contentReady === true,
+  null, { timeout: 120000 });
   const snapshot = async (auditRoot = true) => {
     const state = await page.evaluate(() => {
     const diagnostics = window.__sceneDiagnostics;
@@ -142,7 +147,7 @@ async page => {
     await emulation.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await emulation.send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
     await page.goto(baseURL + '/?renderer=webgl');
-    await page.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1, null, { timeout: 120000 });
+    await ready();
     const device = await page.evaluate(() => ({ coarse: matchMedia('(pointer:coarse)').matches, touches: navigator.maxTouchPoints, dpr: devicePixelRatio }));
     check('touch emulation is active', device.coarse && device.touches > 0 && device.dpr === 3, device);
     const initial = await snapshot();
@@ -240,7 +245,7 @@ async page => {
     await finishRootAudit();
     await metrics(440, 932);
     await page.goto(baseURL + '/?renderer=webgl');
-    await page.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1, null, { timeout: 120000 });
+    await ready();
     const tallInitial = await snapshot();
     await startRootAudit();
     check('tall initial viewport uses its own story height', tallInitial.height === 932
@@ -269,7 +274,7 @@ async page => {
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(baseURL + '/?renderer=webgl');
-    await page.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1, null, { timeout: 120000 });
+    await ready();
     const reducedBefore = await snapshot(false);
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('study-navigate', { detail: 7.5 * window.__sceneDiagnostics.storyHeight })));
     await page.waitForFunction(() => Math.abs(window.__sceneDiagnostics.scrollPosition - 7.5 * window.__sceneDiagnostics.storyHeight) < 2, null, { timeout: 500 });

@@ -105,10 +105,13 @@ Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun 
 
 ### Kaynakların yaşam döngüsü
 
+- Giriş, yalnızca kendi model, video ve efekt kaynaklarını bekler. Proje görselleri ve sonraki bölümlerin görsel kaynakları giriş animasyonu tamamlandıktan sonra yüklenir; sahneler görünmeden önce hazırlanır.
+- Sonraki bölümler hazırlanırken verilen gezinme isteği bekletilir ve hazır olduğunda mevcut geçiş animasyonuyla uygulanır. En son istek geçerlidir; Ana Sayfa seçimi veya ters kaydırma bekleyen isteği iptal eder.
 - Cihaz piksel oranı en fazla **1,5** olarak kullanılır.
 - Mobilde modelin **1024px**, masaüstünde **4K** dokuları seçilir. Geometri, malzemeler ve ışık düzeni ortaktır; ekran döndürülürken ikinci bir model yüklenmez.
 - Sahne çıktıları görünürlük ve geçiş ihtiyaçlarına göre üretilir.
 - Proje görselleri bir kez yüklenir; tekrar eden paneller aynı dokuları paylaşır.
+- Proje posterleri, Hakkımda/İletişim görselleri ve NO SIGNAL etiketi özgün çözünürlük ve pikselleri koruyan kayıpsız WebP dosyalarıdır. Bu 10 görselin toplam aktarım boyutu 18,66 MB'tan 12,88 MB'a düşürülmüştür; sosyal paylaşım kapağı PNG olarak korunur.
 - Proje görselleri en fazla ikişer adet çözülür; çizimden sonra kaynak görüntüler serbest bırakılır. Mobil film dokuları 1024px, masaüstü dokuları 1536px genişliğindedir.
 - Başlık dokuları seçim veya ekran ölçüsü değiştiğinde güncellenir.
 - Video, görünmediğinde veya azaltılmış hareket tercih edildiğinde duraklatılır.

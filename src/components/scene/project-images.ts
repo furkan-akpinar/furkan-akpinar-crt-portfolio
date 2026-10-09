@@ -11,9 +11,9 @@ export function projectImagePlacement(sourceWidth:number,sourceHeight:number,cro
 }
 
 /** Load once, fit without stretching, and share these seven textures across all film slots. */
-export function createProjectImages(width=1536) {
+export function createProjectImages(width=1536,deferred=false) {
   const height=Math.round(width/PROJECT_FILM.mediaAspect);
-  let disposed=false,settled=false;
+  let disposed=false,settled=false,started=false;
   let failure:Error|null=null;
   let resolveReady:()=>void,rejectReady:(reason:Error)=>void;
   const ready=new Promise<void>((resolve,reject)=>{resolveReady=resolve;rejectReady=reject;});
@@ -30,7 +30,7 @@ export function createProjectImages(width=1536) {
     for(const cancel of pendingLoads)cancel();
     rejectReady(error);
   }
-  function load(index:number) {
+  function loadImage(index:number) {
     const project=portfolio.projects[index];
     const canvas=canvases[index],map=textures[index];
     const context=canvas.getContext('2d')!;
@@ -95,13 +95,19 @@ export function createProjectImages(width=1536) {
   // Bound decoded-image peaks. After projection only the shared canvas survives.
   let next=0;
   async function worker(){
-    while(next<portfolio.projects.length&&!disposed&&!failure)await load(next++);
+    while(next<portfolio.projects.length&&!disposed&&!failure)await loadImage(next++);
   }
-  void Promise.all([worker(),worker()]).then(()=>{
-    if(!settled){settled=true;resolveReady();}
-  }).catch(error=>fail(error instanceof Error?error:new Error(String(error))));
+  function load(){
+    if(started||disposed)return ready;
+    started=true;
+    void Promise.all([worker(),worker()]).then(()=>{
+      if(!settled){settled=true;resolveReady();}
+    }).catch(error=>fail(error instanceof Error?error:new Error(String(error))));
+    return ready;
+  }
+  if(!deferred)void load();
   return {
-    textures,averageColors,ready,diagnostics,
+    textures,averageColors,ready,load,diagnostics,
     update(indices:readonly number[],paused=false){
       if(failure)throw failure;
       if(disposed)return;

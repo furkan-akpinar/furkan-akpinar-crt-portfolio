@@ -9,7 +9,7 @@ const INK = "#332f22";
 const STRIPES = ["#7c989b", "#ae96ad", "#bc817a", "#c39770", "#c5b676", "#8eaf97", "#6b9599"];
 
 /** The typeset About sheet. The scene owns its scroll window and page curl. */
-export function createPaperUI(viewportWidth: number, viewportHeight: number) {
+export function createPaperUI(viewportWidth: number, viewportHeight: number, deferred = false) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { alpha: false });
   if (!context) throw new Error("Hakkımda sayfası için çizim alanı oluşturulamadı.");
@@ -24,7 +24,13 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number) {
   let height = Math.max(1, viewportHeight);
   let viewHeight = height;
   let disposed = false;
+  let started = false;
+  let settled = false;
+  let cancelImage: (() => void) | undefined;
+  let resolveReady: () => void;
   const images = new Map<string, HTMLImageElement>();
+  const ready = new Promise<void>((resolve) => { resolveReady = resolve; })
+    .then(() => { if (!disposed) draw(); });
 
   function wrapped(text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
     let line = "";
@@ -173,19 +179,34 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number) {
     draw();
   }
 
-  const ready = new Promise<void>((resolve) => {
+  function load() {
+    if (started || disposed) return ready;
+    started = true;
     const image = new Image();
-    image.onload = () => {
-      if (!disposed) images.set(portfolio.media.people, image);
-      resolve();
+    const finish = (loaded: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      cancelImage = undefined;
+      if (loaded && !disposed) images.set(portfolio.media.people, image);
+      else image.removeAttribute('src');
+      resolveReady();
     };
-    image.onerror = () => resolve();
+    cancelImage = () => finish(false);
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    const timeout = setTimeout(() => finish(false), 30_000);
     image.src = portfolio.media.people;
-  }).then(() => { if (!disposed) draw(); });
+    return ready;
+  }
 
   function dispose() {
     if (disposed) return;
     disposed = true;
+    cancelImage?.();
+    if (!settled) { settled = true; resolveReady(); }
     texture.dispose();
     images.clear();
     canvas.width = 1;
@@ -193,8 +214,9 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number) {
   }
 
   draw();
+  if (!deferred) void load();
   return {
-    texture, ready, resize, dispose,
+    texture, ready, load, resize, dispose,
     get height() { return height; },
   };
 }

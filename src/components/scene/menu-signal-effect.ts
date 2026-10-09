@@ -97,7 +97,7 @@ export function createMenuSignalEffect(
   material.fragmentNode = vec4(linearOutput, 1);
 
   const ready = new Promise<{ labelLoaded: boolean }>(resolve => {
-    new THREE.TextureLoader().load('/textures/no-signal-label.png', loaded => {
+    new THREE.TextureLoader().load('/textures/no-signal-label.webp', loaded => {
       if (disposed) {
         loaded.dispose();
         resolve({ labelLoaded: false });

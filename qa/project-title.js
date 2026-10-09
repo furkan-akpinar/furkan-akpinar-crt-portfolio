@@ -47,8 +47,10 @@ async page => {
   const ready = async (width, height) => {
     await page.setViewportSize({ width, height });
     await page.goto(baseURL + '/?renderer=webgl');
-    await page.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1,
-      null, { timeout: 120000 });
+    // Title/layout regression timing starts once deferred destination assets
+    // are ready; startup.js covers navigation requests during their loading.
+    await page.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1
+      && window.__sceneDiagnostics.contentReady === true, null, { timeout: 120000 });
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('study-navigate', {
       detail: 1.42 * window.__sceneDiagnostics.storyHeight,
     })));

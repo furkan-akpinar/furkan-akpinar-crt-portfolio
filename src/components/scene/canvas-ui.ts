@@ -35,7 +35,7 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
  * scenes. This is deliberately not a screenshot of a DOM overlay. Interaction
  * and the accessible equivalent are owned by the scene's semantic controls.
  */
-export function createCanvasUI(width: number, height: number) {
+export function createCanvasUI(width: number, height: number, deferredPortrait = false) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { alpha: true });
   if (!context) throw new Error("The canvas UI could not initialize its 2D context.");
@@ -52,11 +52,33 @@ export function createCanvasUI(width: number, height: number) {
   let disposed = false;
   let lastOptions: UIOptions | undefined;
   let portrait: HTMLImageElement | undefined;
-  function loadPortrait() {
-    if (portrait) return;
-    portrait = new Image();
-    portrait.onload = () => { if (lastOptions && !disposed) draw(lastOptions); };
-    portrait.src = portfolio.media.team;
+  let portraitReady: Promise<void> | undefined;
+  let cancelPortrait: (() => void) | undefined;
+  function preloadPortrait(): Promise<void> {
+    if (portraitReady) return portraitReady;
+    if (disposed) return Promise.resolve();
+    const image = new Image();
+    portrait = image;
+    portraitReady = new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = (loaded: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        cancelPortrait = undefined;
+        if (!loaded) { image.removeAttribute('src'); portrait = undefined; }
+        resolve();
+        if (loaded && lastOptions && !disposed) draw(lastOptions);
+      };
+      cancelPortrait = () => finish(false);
+      image.onload = () => finish(true);
+      image.onerror = () => finish(false);
+      const timeout = setTimeout(() => finish(false), 30_000);
+      image.src = portfolio.media.team;
+    });
+    return portraitReady;
   }
 
   function resize(nextWidth: number, nextHeight: number) {
@@ -393,7 +415,7 @@ export function createCanvasUI(width: number, height: number) {
   }
 
   function contact(options: UIOptions) {
-    loadPortrait();
+    if (!deferredPortrait) void preloadPortrait();
     const w = logicalWidth;
     const h = logicalHeight;
     const layout = contactLayout(w, h, options.sceneProgress, options.storyHeight, options.visibleHeight);
@@ -561,8 +583,10 @@ export function createCanvasUI(width: number, height: number) {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    cancelPortrait?.();
     if (portrait) {
       portrait.onload = null;
+      portrait.onerror = null;
       portrait.removeAttribute('src');
       portrait = undefined;
     }
@@ -572,5 +596,5 @@ export function createCanvasUI(width: number, height: number) {
   }
 
   resize(width, height);
-  return { texture, draw, resize, dispose };
+  return { texture, draw, resize, preloadPortrait, dispose };
 }

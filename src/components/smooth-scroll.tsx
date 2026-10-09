@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
@@ -21,7 +21,13 @@ interface SmoothScrollProps {
   fallback: boolean;
 }
 
+type DeferredNavigation = { kind: 'navigation'; request: number | MenuNavigationRequest; height: number }
+  | { kind: 'snap'; top: number; duration: number; height: number };
+
 export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollProps) {
+  // A renderer failure recreates this effect in text mode; retain the user's
+  // destination so the accessible fallback can finish that same request.
+  const deferredNavigation = useRef<DeferredNavigation | null>(null);
   useEffect(() => {
     let gesture = createIntroGestureState();
     let lenis: Lenis | null = null;
@@ -29,9 +35,43 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
     const data = runtime.current;
     const controlled = data.controlledScroll;
     const readScroll = () => controlled ? data.scrollPosition : window.scrollY;
+    const contentAvailable = () => fallback || (data.contentReady && data.intro >= 1);
+    const reportContentWait = (active: boolean) => {
+      window.dispatchEvent(new CustomEvent('study-content-wait', { detail: { active } }));
+    };
+    const cancelDeferredNavigation = () => {
+      deferredNavigation.current = null;
+      gesture = createIntroGestureState();
+      reportContentWait(false);
+    };
+    const deferNavigation = (intent: DeferredNavigation) => {
+      deferredNavigation.current = intent;
+      reportContentWait(true);
+    };
+    let restoringHero = false;
+    const holdHero = () => {
+      if (restoringHero) return;
+      restoringHero = true;
+      try {
+        driver?.scrollTo(0, { immediate: true, force: true });
+        // A browser-restored position may precede Lenis' internal position;
+        // reset the native offset even if its target is already zero.
+        if (!controlled && window.scrollY !== 0) window.scrollTo({ top: 0, behavior: 'instant' });
+        data.scrollPosition = data.progress = 0;
+      } finally { restoringHero = false; }
+    };
     const updateProgress = () => {
-      data.scrollPosition = readScroll();
-      data.progress = storyProgress(data.scrollPosition, data.storyHeight);
+      const scroll = readScroll();
+      if (!contentAvailable() && scroll > 0) {
+        if (!restoringHero) {
+          deferNavigation({ kind: 'navigation', request: scroll, height: data.storyHeight });
+          holdHero();
+        }
+        data.scrollPosition = data.progress = 0;
+        return;
+      }
+      data.scrollPosition = scroll;
+      data.progress = storyProgress(scroll, data.storyHeight);
     };
     let viewport = { width: window.innerWidth, height: data.storyHeight };
     let disposed = false;
@@ -51,6 +91,11 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
         return false;
       }
       if (document.querySelector('.experience')?.classList.contains('is-fallback')) return true;
+      if (!contentAvailable() && Math.abs(deltaY) >= Math.abs(deltaX) && deltaY < 0) {
+        cancelDeferredNavigation();
+        event.preventDefault();
+        return false;
+      }
 
       const wheelSteps = event instanceof WheelEvent
         ? projectAboutWheelSteps(
@@ -79,6 +124,13 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
         window.dispatchEvent(new CustomEvent('study-project', { detail: result.action.direction }));
       }
       if (result.action.type === 'snap') {
+        if (!contentAvailable() && result.action.top > 0) {
+          deferNavigation({ kind: 'snap', top: result.action.top, duration: result.action.duration, height: data.storyHeight });
+          // The transition's clock starts when its assets are ready, not while
+          // the user is waiting. Further input may replace or cancel the intent.
+          gesture = createIntroGestureState();
+          return false;
+        }
         if (driver) {
           driver.scrollTo(result.action.top, {
             duration: result.action.duration,
@@ -176,11 +228,16 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
     const completeSignal = () => {
       signalTimeline?.progress(1);
     };
-    const handleNavigation = (event: Event) => {
+    const executeNavigation = (request: number | MenuNavigationRequest) => {
       if (data.menuSignalActive) return;
-      const request = (event as CustomEvent<number | MenuNavigationRequest>).detail;
       const top = typeof request === 'number' ? request : request.top;
-      gesture = createIntroGestureState();
+      if (!contentAvailable() && top > 0) {
+        deferNavigation({ kind: 'navigation', request, height: data.storyHeight });
+        gesture = createIntroGestureState();
+        holdHero();
+        return;
+      }
+      cancelDeferredNavigation();
 
       if (typeof request !== 'number' && request.signal) {
         monitorTarget = null;
@@ -235,8 +292,68 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
       if (driver) driver.scrollTo(top, { duration: 1.15, force: true, lock: true });
       else window.scrollTo({ top, behavior: 'instant' });
     };
+    const handleNavigation = (event: Event) => {
+      executeNavigation((event as CustomEvent<number | MenuNavigationRequest>).detail);
+    };
+    const releaseDeferredNavigation = () => {
+      if (disposed || !contentAvailable()) return;
+      const intent = deferredNavigation.current;
+      if (!intent) return;
+      cancelDeferredNavigation();
+      if (intent.kind === 'snap') {
+        const top = fallback
+          ? window.scrollY + (document.getElementById('projects')?.getBoundingClientRect().top ?? 0)
+          : intent.height > 0 ? intent.top / intent.height * data.storyHeight : intent.top;
+        gesture.latch = { type: 'snap', targetVh: top / data.storyHeight,
+          startedAt: performance.now(), durationMs: intent.duration * 1000 };
+        if (driver) driver.scrollTo(top, { duration: intent.duration, lock: true, force: true, easing: introSnapEase });
+        else window.scrollTo({ top, behavior: 'instant' });
+        return;
+      }
+      const original = intent.request;
+      const restoredScene = typeof original === 'number'
+        ? getSceneState(storyProgress(original, intent.height)).scene.id : null;
+      const request = typeof original === 'number'
+        ? fallback && restoredScene
+          ? window.scrollY + (document.getElementById(restoredScene)?.getBoundingClientRect().top ?? 0)
+          : (intent.height > 0 ? original / intent.height * data.storyHeight : original)
+        : { ...original, signal: fallback ? false : original.signal,
+          top: fallback
+            ? window.scrollY + (document.getElementById(original.id)?.getBoundingClientRect().top ?? 0)
+            : sceneScrollTop(original.id, data.storyHeight) };
+      executeNavigation(request);
+      if (typeof request !== 'number' && !request.signal) {
+        window.dispatchEvent(new CustomEvent('study-content-navigation', { detail: { id: request.id } }));
+      }
+    };
     window.addEventListener('study-navigate', handleNavigation);
+    window.addEventListener('study-content-ready', releaseDeferredNavigation);
+    window.addEventListener('study-content-cancel', cancelDeferredNavigation);
     window.addEventListener('study-navigation-cancel', completeSignal);
+
+    // Native desktop keyboard scrolling bypasses Lenis' wheel arbitration.
+    // Capture it before the browser moves the document into an unready scene.
+    const guardStartupKey = (event: KeyboardEvent) => {
+      if (contentAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const source = event.target instanceof Element ? event.target : null;
+      if (source?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')) return;
+      if (event.key === ' ' && source?.closest('button,[role="button"]')) return;
+      if (event.key === 'Home' || event.key === 'ArrowUp' || event.key === 'PageUp' || (event.key === ' ' && event.shiftKey)) {
+        event.preventDefault();
+        cancelDeferredNavigation();
+        return;
+      }
+      if (!['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) return;
+      event.preventDefault();
+      if (data.menuOpen || data.intro < 1) return;
+      if (event.key === 'End') {
+        deferNavigation({ kind: 'navigation', request: data.scrollLimit, height: data.storyHeight });
+      } else {
+        arbitrateGesture(0, event.key === 'ArrowDown' ? 48 : data.storyHeight * .85, event);
+      }
+    };
+    window.addEventListener('keydown', guardStartupKey, true);
+    window.addEventListener('scroll', updateProgress, { passive: true });
 
     const blockNavigationKey = (event: KeyboardEvent) => {
       if (
@@ -281,7 +398,11 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
     window.addEventListener('study-layout-change', refreshLayout);
     // The trigger's initial refresh supplies restored scroll progress as well.
     trigger?.refresh();
-    queueMicrotask(() => { if (!disposed) updateProgress(); });
+    queueMicrotask(() => {
+      if (disposed) return;
+      updateProgress();
+      releaseDeferredNavigation();
+    });
 
     return () => {
       disposed = true;
@@ -293,7 +414,12 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
       driver?.destroy();
       window.removeEventListener('wheel', handleNativeWheel);
       window.removeEventListener('study-navigate', handleNavigation);
+      window.removeEventListener('study-content-ready', releaseDeferredNavigation);
+      window.removeEventListener('study-content-cancel', cancelDeferredNavigation);
       window.removeEventListener('study-navigation-cancel', completeSignal);
+      window.removeEventListener('keydown', guardStartupKey, true);
+      window.removeEventListener('scroll', updateProgress);
+      reportContentWait(false);
       window.removeEventListener('keydown', blockNavigationKey);
       window.removeEventListener('touchmove', blockNavigationTouch);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

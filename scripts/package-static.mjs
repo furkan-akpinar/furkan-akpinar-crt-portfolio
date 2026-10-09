@@ -13,10 +13,10 @@ const assets = [
   '_headers', 'model-credits.html', 'social-preview.png',
   'fonts/STIXTwoText-Variable.ttf', 'fonts/STIXTwoText-Italic-Variable.ttf', 'fonts/VT323-Regular.ttf',
   'fonts/OFL-STIXTwoText.txt', 'fonts/OFL-VT323.txt',
-  'images/about-team.png', 'images/people-atlas.png', 'images/projects/posters',
+  'images/about-team.webp', 'images/people-atlas.webp', 'images/projects/posters',
   'models/commodore64/web', 'models/commodore64/mobile', 'models/commodore64/ATTRIBUTION.txt',
   'media/hero-pinterest/showreel.mp4', 'media/hero-pinterest/light-tracks.json',
-  'textures/no-signal-label.png',
+  'textures/no-signal-label.webp',
 ];
 
 function copyReleaseAsset(source, destination) {

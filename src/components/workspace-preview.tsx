@@ -52,6 +52,7 @@ export function WorkspacePreview() {
   const [booted, setBooted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [contentWaiting, setContentWaiting] = useState(false);
   const [activeScene, setActiveScene] = useState<SceneId>('hero');
   const [navigation, setNavigation] = useState<NavigationLayout | null>(null);
   const [projectIndex, setProjectIndex] = useState(0);
@@ -87,6 +88,28 @@ export function WorkspacePreview() {
   useEffect(() => {
     if (fallback) window.dispatchEvent(new Event('study-navigation-cancel'));
   }, [fallback]);
+
+  useEffect(() => {
+    let disposed = false;
+    const waitForContent = (event: Event) => {
+      setContentWaiting((event as CustomEvent<{ active: boolean }>).detail.active);
+    };
+    const focusDeferredDestination = (event: Event) => {
+      const { id } = (event as CustomEvent<{ id: SceneId }>).detail;
+      // A queued request must not move focus or expose destination controls
+      // until scrolling is allowed to leave the prepared hero scene.
+      queueMicrotask(() => {
+        if (!disposed) document.getElementById(id)?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener('study-content-wait', waitForContent);
+    window.addEventListener('study-content-navigation', focusDeferredDestination);
+    return () => {
+      disposed = true;
+      window.removeEventListener('study-content-wait', waitForContent);
+      window.removeEventListener('study-content-navigation', focusDeferredDestination);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
@@ -299,7 +322,8 @@ export function WorkspacePreview() {
     const source = fallback ? activeScene : getSceneState(runtime.current.progress).scene.id;
     const signal = !fallback && booted && shouldUseMenuSignal(source, id);
     const menuWasOpen = runtime.current.menuOpen;
-    pendingNavigationFocus.current = menuWasOpen && !signal ? id : null;
+    const destinationReady = fallback || id === 'hero' || (runtime.current.contentReady && runtime.current.intro >= 1);
+    pendingNavigationFocus.current = menuWasOpen && !signal && destinationReady ? id : null;
     closeMenu();
     const section = fallback ? document.getElementById(id) : null;
     const top = section ? window.scrollY + section.getBoundingClientRect().top : sceneScrollTop(id, runtime.current.storyHeight);
@@ -311,7 +335,7 @@ export function WorkspacePreview() {
         origin
       }
     }));
-    if (!menuWasOpen && !signal) document.getElementById(id)?.focus({ preventScroll: true });
+    if (!menuWasOpen && !signal && destinationReady) document.getElementById(id)?.focus({ preventScroll: true });
   };
 
   const skipIntro = () => {
@@ -436,6 +460,9 @@ export function WorkspacePreview() {
     >
       {portfolio.boot.version}
     </span>}
+    {contentWaiting && !fallback && <p className="content-loading-notice" role="status">
+      Bölüm hazırlanıyor…
+    </p>}
     {transitioning && <div
       className="navigation-shield"
       aria-hidden="true"
@@ -475,6 +502,9 @@ export function WorkspacePreview() {
             closeMenu();
             return;
           }
+          // Reopening navigation cancels a waiting destination so background
+          // readiness cannot move the page while the user chooses another one.
+          window.dispatchEvent(new Event('study-content-cancel'));
           pendingMenuFocus.current = event.detail === 0;
           runtime.current.menuOpen = true;
           setMenuOpen(true);

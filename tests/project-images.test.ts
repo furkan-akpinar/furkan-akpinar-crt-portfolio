@@ -62,6 +62,76 @@ function installBrowser(t: TestContext) {
   return { images, canvases, get draws() { return draws; }, active: () => images.filter(image => image.src !== '') };
 }
 
+test('deferred screenshots wait without spending request deadlines and start one shared worker pool', async t => {
+  const browser = installBrowser(t);
+  const gallery = createProjectImages(128, true);
+  t.after(() => gallery.dispose());
+  let ready = false;
+  const completion = gallery.ready.then(() => { ready = true; });
+
+  t.mock.timers.tick(60_000);
+  await flushMicrotasks();
+  assert.equal(browser.images.length, 0);
+  assert.equal(ready, false);
+  assert.equal(gallery.diagnostics.error, null);
+  assert.equal(gallery.load(), gallery.ready);
+  assert.equal(gallery.load(), gallery.ready);
+  assert.equal(browser.active().length, 2);
+
+  while (gallery.diagnostics.readyCount < portfolio.projects.length) {
+    const batch = browser.active();
+    assert.ok(batch.length > 0 && batch.length <= 2);
+    batch.forEach(image => image.succeed());
+    await flushMicrotasks();
+  }
+  await completion;
+  assert.equal(ready, true);
+  assert.equal(browser.images.length, portfolio.projects.length);
+  assert.equal(gallery.load(), gallery.ready);
+  assert.equal(browser.active().length, 0);
+});
+
+test('disposal before deferred loading settles readiness without starting requests later', async t => {
+  const browser = installBrowser(t);
+  const gallery = createProjectImages(128, true);
+  let disposals = 0;
+  gallery.textures.forEach(texture => texture.addEventListener('dispose', () => disposals++));
+
+  gallery.dispose();
+  gallery.dispose();
+  await gallery.ready;
+  assert.equal(gallery.load(), gallery.ready);
+  await gallery.load();
+  t.mock.timers.tick(60_000);
+  await flushMicrotasks();
+  assert.equal(browser.images.length, 0);
+  assert.equal(browser.draws, 0);
+  assert.equal(disposals, portfolio.projects.length);
+  assert.ok(browser.canvases.every(canvas => canvas.width === 1 && canvas.height === 1));
+});
+
+test('failed deferred loading cannot restart or upload images through late callbacks', async t => {
+  const browser = installBrowser(t);
+  const gallery = createProjectImages(128, true);
+  t.after(() => gallery.dispose());
+  const completion = gallery.ready.then(() => 'ready', error => error as Error);
+  gallery.load();
+  const callbacks = browser.active().map(image => image.onload);
+  browser.images[0].onerror?.();
+  const error = await completion;
+  assert.ok(error instanceof Error);
+
+  assert.equal(gallery.load(), gallery.ready);
+  callbacks.forEach(callback => callback?.());
+  t.mock.timers.tick(60_000);
+  await flushMicrotasks();
+  assert.equal(browser.images.length, 2);
+  assert.equal(browser.active().length, 0);
+  assert.equal(browser.draws, 0);
+  assert.equal(gallery.diagnostics.readyCount, 0);
+  assert.equal(gallery.diagnostics.error, error.message);
+});
+
 test('queued screenshot batches may exceed thirty seconds while each active load stays within its deadline', async t => {
   const browser = installBrowser(t);
   const gallery = createProjectImages(128);

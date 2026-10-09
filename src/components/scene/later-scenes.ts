@@ -13,21 +13,21 @@ type LaterId = "contact";
 const clamp = (n: number) => THREE.MathUtils.clamp(n, 0, 1);
 
 /** Dependency-ordered later scenes. The calling pipeline owns the final header/CRT pass. */
-export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number) {
+export function createLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number, deferred = false) {
   const scope = createResourceScope();
-  try { return buildLaterScenes(renderer, width, height, scope); }
+  try { return buildLaterScenes(renderer, width, height, scope, deferred); }
   catch (error) { scope.dispose(); throw error; }
 }
 
-function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number, scope: ReturnType<typeof createResourceScope>) {
+function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height: number, scope: ReturnType<typeof createResourceScope>, deferred: boolean) {
   let w = width, h = height, aspect = w / h, disposed = false;
   const own = scope.own;
   const sourceTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
   const nextTarget = own(new THREE.RenderTarget(w, h, { depthBuffer: true }));
-  const paper = own(createPaperUI(w, h));
+  const paper = own(createPaperUI(w, h, true));
   let lastCurl = -1;
   const ids: LaterId[] = ["contact"];
-  const ui = Object.fromEntries(ids.map(id => [id, own(createCanvasUI(w, h))])) as Record<LaterId, ReturnType<typeof createCanvasUI>>;
+  const ui = Object.fromEntries(ids.map(id => [id, own(createCanvasUI(w, h, true))])) as Record<LaterId, ReturnType<typeof createCanvasUI>>;
   const uiKeys = new Map<LaterId, string>();
   const plane = own(new THREE.PlaneGeometry(2, 2));
   const uiCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 20); uiCamera.position.z = 5;
@@ -125,10 +125,24 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
     paper.resize(w, h); ids.forEach(id => ui[id].resize(w, h)); uiKeys.clear();
   }
   resize(w, h);
-  const ready = Promise.all([paper.ready]).then(() => undefined);
-  return { render, resize, ready, diagnostics, dispose() {
+  let started = false, settled = false;
+  let resolveReady: () => void, rejectReady: (error: unknown) => void;
+  const ready = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  function load() {
+    if (started || disposed) return ready;
+    started = true;
+    void Promise.all([paper.load(), ui.contact.preloadPortrait()]).then(() => {
+      if (!settled) { settled = true; resolveReady(); }
+    }).catch((error: unknown) => {
+      if (!settled) { settled = true; rejectReady(error); }
+    });
+    return ready;
+  }
+  if (!deferred) void load();
+  return { render, resize, ready, load, diagnostics, dispose() {
     if (disposed) return; disposed = true;
     scope.dispose();
+    if (!settled) { settled = true; resolveReady(); }
     for (const scene of [curlScene, paperScene, blueBackground, ...Object.values(uiScenes)]) scene.clear();
   } };
 }
