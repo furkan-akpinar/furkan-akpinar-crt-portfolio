@@ -70,14 +70,27 @@ assert.equal(missing.status, 404);
 assert.equal(missing.headers['cache-control'], 'no-store');
 
 const unavailable = await request(geometryPath, { 'Accept-Encoding': '*;q=0' });
+let strictNegotiationEndToEndVerified = false;
+let unsupportedEncodingObservation;
 if (unavailable.status === 415 && ['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) {
   // Wrangler's local HTTP proxy can reject an empty encoding set before it
   // reaches the Worker. Worker-level 406 negotiation is covered by unit tests.
   assert.equal(unavailable.body.toString(), 'Unsupported Media Type');
   assert.equal(unavailable.headers['accept-encoding'], 'br, gzip');
+  unsupportedEncodingObservation = 'Wrangler local proxy rejected the request before Worker negotiation.';
+} else if (unavailable.status === 200 && unavailable.headers.server?.toLowerCase() === 'cloudflare') {
+  // The live edge can normalize this synthetic all-forbidden header and return
+  // identity bytes. Record the limitation, not a successful 406 negotiation.
+  // Normal br/gzip/identity representation checks above remain unconditional.
+  assert.equal(unavailable.headers['content-encoding'], undefined);
+  assert.equal(digest(unavailable.body), digest(original), 'Cloudflare q=0 fallback changed geometry bytes');
+  unsupportedEncodingObservation = 'Cloudflare returned exact identity bytes for *;q=0; strict rejection is not verified end to end.';
 } else {
   assert.equal(unavailable.status, 406);
   assert.equal(unavailable.headers['cache-control'], 'no-store');
+  assert.equal(unavailable.body.length, 0);
+  strictNegotiationEndToEndVerified = true;
+  unsupportedEncodingObservation = 'The all-forbidden encoding set was rejected with 406.';
 }
 
 const mobilePath = `${release.assetRoots.models}/models/commodore64/mobile/commodore-64-1k.gltf`;
@@ -98,4 +111,5 @@ assert.ok(video.body.equals(video.status === 206 ? originalVideo.subarray(0, 16)
 assert.match(video.headers['content-type'], /video\/mp4/);
 
 console.log(JSON.stringify({ base, geometryPath, results, head: true, revalidation: true, rangeStatus: range.status,
-  missingVersion: true, unsupportedEncodingStatus: unavailable.status, gltfRelativeDependencies: true, videoRangeStatus: video.status }, null, 2));
+  missingVersion: true, unsupportedEncodingStatus: unavailable.status, strictNegotiationEndToEndVerified,
+  unsupportedEncodingObservation, gltfRelativeDependencies: true, videoRangeStatus: video.status }, null, 2));

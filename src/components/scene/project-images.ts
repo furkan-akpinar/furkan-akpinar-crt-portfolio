@@ -36,6 +36,9 @@ export function createProjectImages(width=1536,deferred=false) {
     const context=canvas.getContext('2d')!;
     return new Promise<void>((resolve,reject)=>{
     const image=new Image();
+    // These off-DOM images gate the intro, so they must not sit behind all
+    // desktop model textures at the browser's default image priority.
+    image.fetchPriority='high';
     let finished=false;
     const release=()=>{
       finished=true;clearTimeout(timeout);
@@ -64,12 +67,12 @@ export function createProjectImages(width=1536,deferred=false) {
       }catch(error){release();reject(error);}
     };
     image.onerror=()=>{if(finished)return;release();reject(new Error(`Proje görseli yüklenemedi: ${project.image}`));};
-    // Each active request gets the full allowance; waiting for a worker does not
-    // spend the later screenshots' budget while the computer textures download.
+    // Browser queue time counts too: the desktop 4K textures can share a slow
+    // connection for over a minute. Network errors still reject immediately.
     const timeout=setTimeout(()=>{
       if(finished)return;
       release();reject(new Error(`Proje görseli zaman aşımına uğradı: ${project.image}`));
-    },30_000);
+    },120_000);
     image.src=project.image;
     });
   }

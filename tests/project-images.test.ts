@@ -132,7 +132,7 @@ test('failed deferred loading cannot restart or upload images through late callb
   assert.equal(gallery.diagnostics.error, error.message);
 });
 
-test('queued screenshot batches may exceed thirty seconds while each active load stays within its deadline', async t => {
+test('healthy screenshot requests survive over thirty seconds of competing desktop transfers', async t => {
   const browser = installBrowser(t);
   const gallery = createProjectImages(128);
   t.after(() => gallery.dispose());
@@ -143,8 +143,8 @@ test('queued screenshot batches may exceed thirty seconds while each active load
   while (gallery.diagnostics.readyCount < portfolio.projects.length) {
     const batch = browser.active();
     assert.ok(batch.length > 0 && batch.length <= 2, 'only two images may decode concurrently');
-    t.mock.timers.tick(16_000);
-    elapsed += 16_000;
+    t.mock.timers.tick(45_000);
+    elapsed += 45_000;
     await flushMicrotasks();
     assert.equal(result, 'pending');
     batch.forEach(image => image.succeed());
@@ -164,13 +164,13 @@ test('queued screenshot batches may exceed thirty seconds while each active load
   assert.equal(gallery.diagnostics.error, null);
 });
 
-test('an actually stalled image rejects after thirty active seconds and cancels its partner and queue', async t => {
+test('an actually stalled image rejects after its bounded request budget and cancels its partner and queue', async t => {
   const browser = installBrowser(t);
   const gallery = createProjectImages(128);
   t.after(() => gallery.dispose());
   const completion = gallery.ready.then(() => 'ready', error => error as Error);
   const lateLoad = browser.images[0].onload;
-  t.mock.timers.tick(29_999);
+  t.mock.timers.tick(119_999);
   await flushMicrotasks();
   assert.equal(gallery.diagnostics.error, null);
   t.mock.timers.tick(1);

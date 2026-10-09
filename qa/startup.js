@@ -3,7 +3,7 @@ async page => {
   await page.goto(origin + '/?renderer=none');
   const results = [], errors = [], owned = [];
   const media = /\/images\/(?:projects\/posters\/[^/?]+|about-portrait\.webp|contact-portrait\.webp)(?:\?|$)/;
-  const expected = 33;
+  const expected = 35;
   let completed = false;
   const check = (name, pass, detail) => results.push({name, pass: Boolean(pass), detail});
   const create = async ({mobile = false, reduced = false, hold = media, fault = null} = {}) => {
@@ -105,6 +105,16 @@ async page => {
         :visited.d.scrollMode==='native');
       await close(entry);
     }
+    const delayed=await create({hold:/\/images\/projects\/posters\/01-[^/?]+/});
+    await delayed.target.waitForTimeout(35_000);
+    const waiting=await state(delayed);
+    check('a queued desktop poster remains pending after thirty seconds',waiting.d?.gallery.readyCount===6
+      &&waiting.d.gallery.error===null&&!waiting.booted&&waiting.status!=='fallback');
+    await release(delayed);
+    const delayedReady=await state(delayed);
+    check('a delayed desktop poster opens the complete scene after arriving',delayedReady.booted
+      &&delayedReady.d.contentReady&&delayedReady.d.preparedPosters===7);
+    await close(delayed);
     const fonts=await create({mobile:true,hold:/\/fonts\/.*\.woff2(?:\?|$)/});
     check('model starts while fonts are still downloading',fonts.requests.some(url=>/\/models\/.*\.gltf/.test(url)));
     const fontState=await state(fonts);
