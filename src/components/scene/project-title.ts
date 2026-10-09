@@ -35,7 +35,14 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
   }
   syncTitleBounds();
   const slots=[0,1].map(()=>{
-    const ui=own(createCanvasUI(w,h));
+    const ui=own(createCanvasUI(w,h,false,(width,height)=>{
+      const caption=projectCaptionLayout(width,height);
+      // Keep the same logical artwork and pixel grid, omitting only empty
+      // rows. Padding preserves the mobile phosphor halo and link underline.
+      return {top:caption.titleBaseline-caption.titleFontSize*1.5-32,bottom:caption.baseline+32};
+    }));
+    const crop=ui.samplingWindow;
+    const textureWindow=uniform(new THREE.Vector2(crop.scale,crop.offset));
     const angle=uniform(0), opacity=uniform(0), lift=uniform(0), blur=uniform(0);
     const pixel=uniform(new THREE.Vector2(1/w,1/h));
     const material=own(new THREE.MeshBasicNodeMaterial({transparent:true,depthTest:false,depthWrite:false}));
@@ -44,13 +51,14 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
     const depth=relative.y.mul(sin(angle)).mul(0.95).add(1);
     material.positionNode=vec3(relative.x.div(depth),relative.y.mul(cos(angle)).div(depth).add(pivot).add(lift),0);
     const shift=pixel.mul(vec2(1,3)).mul(blur);
-    const tex=texture(ui.texture,uv());
-    const soft=tex.mul(0.5).add(texture(ui.texture,uv().add(shift)).mul(0.25))
-      .add(texture(ui.texture,uv().sub(shift)).mul(0.25));
+    const sample=(at:THREE.Node<'vec2'>)=>texture(ui.texture,vec2(at.x,at.y.mul(textureWindow.x).add(textureWindow.y)));
+    const tex=sample(uv());
+    const soft=tex.mul(0.5).add(sample(uv().add(shift)).mul(0.25))
+      .add(sample(uv().sub(shift)).mul(0.25));
     material.colorNode=vec4(soft.rgb,soft.a.mul(opacity));
     material.toneMapped=false;
     const mesh=new THREE.Mesh(w<900?wave.geometry:shape,material);scene.add(mesh);
-    return {ui,material,angle,opacity,lift,blur,pixel,pivot,mesh};
+    return {ui,material,angle,opacity,lift,blur,pixel,pivot,mesh,textureWindow};
   });
   const ease=(x:number)=>1-Math.pow(1-THREE.MathUtils.clamp(x,0,1),3);
   function captionRoll(slot:(typeof slots)[number],roll:number,entryRoll=0) {
@@ -96,6 +104,7 @@ function buildProjectTitle(width:number,height:number,scope:ReturnType<typeof cr
     const {titleBaseline}=projectCaptionLayout(w,h);
     slots.forEach(slot=>{
       slot.ui.resize(w,h);slot.pixel.value.set(1/w,1/h);
+      const crop=slot.ui.samplingWindow;slot.textureWindow.value.set(crop.scale,crop.offset);
       slot.pivot.value=w<900?1-2*(titleBaseline+6)/h:0.6;
       slot.mesh.geometry=w<900?wave.geometry:shape;
     });

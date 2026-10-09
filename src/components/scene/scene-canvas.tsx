@@ -10,13 +10,13 @@ import type { SceneCanvasProps } from './types';
 
 type PipelineType = ReturnType<typeof createScenePipeline>;
 type SceneLifecycle = ReturnType<typeof createSceneLifecycle>;
-function Pipeline({ runtime, onStatus, lifecycle }: SceneCanvasProps & { lifecycle: SceneLifecycle }) {
+function Pipeline({ runtime, onStatus, lifecycle, fontsReady }: SceneCanvasProps & { lifecycle: SceneLifecycle; fontsReady: Promise<unknown> }) {
   const { gl, size } = useThree();
   const pipeline = useRef<PipelineType | null>(null);
   const announced = useRef(false);
   useEffect(() => {
     const renderer = gl as unknown as THREE.WebGPURenderer;
-    const current = lifecycle.run(() => createScenePipeline(renderer, size.width, size.height));
+    const current = lifecycle.run(() => createScenePipeline(renderer, size.width, size.height, fontsReady));
     if (!current) return;
     pipeline.current = current;
     announced.current = false;
@@ -29,7 +29,7 @@ function Pipeline({ runtime, onStatus, lifecycle }: SceneCanvasProps & { lifecyc
     };
     // Resize is handled separately without rebuilding GPU resources.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gl]);
+  }, [gl, fontsReady]);
   useEffect(() => { lifecycle.run(() => pipeline.current?.resize(size.width,size.height)); }, [lifecycle,size.width,size.height]);
   useFrame((_, delta) => {
     lifecycle.run(() => {
@@ -80,7 +80,10 @@ export default function SceneCanvas({ onStatus, runtime }: SceneCanvasProps) {
     }
     async function init() {
       try {
-        await Promise.all([document.fonts.load('500 48px "STIX Two Text"'),document.fonts.load('italic 700 32px "STIX Two Text"'),document.fonts.load('400 48px "VT323"')]);
+        // Font rasterization waits for the real faces, while independent model,
+        // image and video requests can start as soon as the renderer is mounted.
+        const fontsReady = Promise.all([document.fonts.load('500 48px "STIX Two Text"'),document.fonts.load('italic 700 32px "STIX Two Text"'),document.fonts.load('400 48px "VT323"')]);
+        void fontsReady.catch(lifecycle.fail);
         if(!lifecycle.active) return;
         const initialSize = size();
         await root.configure({
@@ -108,7 +111,7 @@ export default function SceneCanvas({ onStatus, runtime }: SceneCanvasProps) {
           size:initialSize,dpr:[1,1.5],frameloop:'never',
         });
         if(!lifecycle.active) return;
-        const store=root.render(<Pipeline runtime={runtime} onStatus={onStatus} lifecycle={lifecycle}/>);
+        const store=root.render(<Pipeline runtime={runtime} onStatus={onStatus} lifecycle={lifecycle} fontsReady={fontsReady}/>);
         if(!lifecycle.active) return;
         // GSAP already owns Lenis and the timelines. Fiber's manual clock uses seconds.
         renderTick=(time:number)=>{ lifecycle.run(() => store.getState().advance(time,true)); };

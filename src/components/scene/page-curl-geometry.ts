@@ -6,6 +6,9 @@ const REFERENCE_ASPECT = 1916 / 1034;
 const SLOPE = .282;
 const NX = SLOPE / Math.hypot(1, SLOPE);
 const NY = -1 / Math.hypot(1, SLOPE);
+const RADIUS_PROFILE = [[0,.13],[4/17,.225],[8/17,.687],[12/17,.59],[1,.42]] as const;
+const FAN_PROFILE = [[0,0],[4/17,.66],[8/17,.80],[12/17,.30],[1,0]] as const;
+export interface CurlVertex { x:number; y:number; z:number; shade:number; backShade:number }
 function profile(q:number,values:readonly (readonly [number,number])[]) {
   const i=Math.max(1,values.findIndex(v=>v[0]>=q));
   const a=values[i-1],b=values[i];
@@ -22,26 +25,29 @@ export function curlFrame(progress: number, aspect: number) {
   const referenceExtent=NX*REFERENCE_ASPECT-NY;
   const edge=(2*b-1-SLOPE*REFERENCE_ASPECT)/Math.hypot(1,SLOPE)*extent/referenceExtent;
   const size=Math.min(1,Math.sqrt(aspect/REFERENCE_ASPECT));
-  const radius=profile(q,[[0,.13],[4/17,.225],[8/17,.687],[12/17,.59],[1,.42]])*size;
-  const fan=profile(q,[[0,0],[4/17,.66],[8/17,.80],[12/17,.30],[1,0]])*size;
+  const radius=profile(q,RADIUS_PROFILE)*size;
+  const fan=profile(q,FAN_PROFILE)*size;
   return { crease:edge-radius,radius,nx:NX,ny:NY,fan,maxDistance:extent-edge+radius };
 }
 
 /** Isometric cylindrical bend: only the normal coordinate bends, never UVs.
  * The lifted free end fans along the crease to follow the measured corner;
  * this is a fitted deformation, not a recovered physical reference model. */
-export function curlVertex(x:number,y:number,frame:ReturnType<typeof curlFrame>) {
+export function curlVertex(x:number,y:number,frame:ReturnType<typeof curlFrame>,out:CurlVertex={x:0,y:0,z:0,shade:1,backShade:1}) {
   const {nx,ny,crease,radius}=frame;
   const d=nx*x+ny*y-crease;
-  if(d<=0)return {x,y,z:0,shade:1,backShade:1};
+  if(d<=0){out.x=x;out.y=y;out.z=0;out.shade=1;out.backShade=1;return out;}
   const angle=Math.min(Math.PI,d/radius);
   const normal=crease+radius*Math.sin(angle)-Math.max(0,d-Math.PI*radius);
   const displacement=normal-(nx*x+ny*y);
   const t=Math.min(1,Math.max(0,(d-radius*Math.PI/2)/Math.max(.001,frame.maxDistance-radius*Math.PI/2)));
   const fan=frame.fan*t*t*(3-2*t);
-  return {x:x+nx*displacement+ny*fan,y:y+ny*displacement-nx*fan,z:radius*(1-Math.cos(angle)),
-    shade:1-.60*Math.sin(angle)**4,
-    backShade:.30+.92*Math.sin(Math.min(1,t*1.3)*Math.PI/2)};
+  out.x=x+nx*displacement+ny*fan;
+  out.y=y+ny*displacement-nx*fan;
+  out.z=radius*(1-Math.cos(angle));
+  out.shade=1-.60*Math.sin(angle)**4;
+  out.backShade=.30+.92*Math.sin(Math.min(1,t*1.3)*Math.PI/2);
+  return out;
 }
 
 /** At a header pixel, choose the ink for the actual exposed surface. */

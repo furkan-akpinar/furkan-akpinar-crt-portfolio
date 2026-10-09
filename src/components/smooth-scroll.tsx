@@ -36,17 +36,12 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
     const controlled = data.controlledScroll;
     const readScroll = () => controlled ? data.scrollPosition : window.scrollY;
     const contentAvailable = () => fallback || (data.contentReady && data.intro >= 1);
-    const reportContentWait = (active: boolean) => {
-      window.dispatchEvent(new CustomEvent('study-content-wait', { detail: { active } }));
-    };
     const cancelDeferredNavigation = () => {
       deferredNavigation.current = null;
       gesture = createIntroGestureState();
-      reportContentWait(false);
     };
     const deferNavigation = (intent: DeferredNavigation) => {
       deferredNavigation.current = intent;
-      reportContentWait(true);
     };
     let restoringHero = false;
     const holdHero = () => {
@@ -419,7 +414,6 @@ export function SmoothScroll({ runtime, reducedMotion, fallback }: SmoothScrollP
       window.removeEventListener('study-navigation-cancel', completeSignal);
       window.removeEventListener('keydown', guardStartupKey, true);
       window.removeEventListener('scroll', updateProgress);
-      reportContentWait(false);
       window.removeEventListener('keydown', blockNavigationKey);
       window.removeEventListener('touchmove', blockNavigationTouch);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

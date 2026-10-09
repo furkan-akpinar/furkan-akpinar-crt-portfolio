@@ -27,3 +27,11 @@ test('curl starts covered and ends clear at all screen corners',()=>{
   assert.equal(curlCovers(1,aspect,u,v),false);
  }
 });
+test('the reusable mesh sample resets depth and both shades when a folded point becomes flat',()=>{
+ const aspect=1440/900,sample={x:0,y:0,z:0,shade:1,backShade:1};
+ assert.strictEqual(curlVertex(aspect,-1,curlFrame(.6,aspect),sample),sample);
+ assert.ok(sample.z>0);
+ assert.notEqual(sample.backShade,1);
+ assert.strictEqual(curlVertex(-aspect,1,curlFrame(0,aspect),sample),sample);
+ assert.deepEqual(sample,{x:-aspect,y:1,z:0,shade:1,backShade:1});
+});

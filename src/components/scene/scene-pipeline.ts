@@ -27,13 +27,13 @@ import { createResourceScope } from './resource-scope';
 const smooth = (value: number) => { const t = THREE.MathUtils.clamp(value, 0, 1); return t * t * (3 - 2 * t); };
 
 /** One renderer, dependency-ordered FBOs, and one final CRT composite for scene + UI. */
-export function createScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number) {
+export function createScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number, fonts: Promise<unknown> = Promise.resolve()) {
   const resources = createResourceScope();
-  try { return buildScenePipeline(renderer, width, height, resources); }
+  try { return buildScenePipeline(renderer, width, height, resources, fonts); }
   catch (error) { resources.dispose(); throw error; }
 }
 
-function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number, resources: ReturnType<typeof createResourceScope>) {
+function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number, resources: ReturnType<typeof createResourceScope>, fonts: Promise<unknown>) {
   const own = resources.own;
   let w = width, h = height;
   // Select before decoding any image, then retain the same model across rotations.
@@ -74,9 +74,14 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   const heroReel=own(createHeroReel());
   const entryMediaIndices=[4,5,6,0];
   let assetsReady = false;
+  let fontsReady = false, heroCompiled = false;
   let warmupStarted = false, warmupFinished = false;
-  let contentStarted = false, contentAssetsReady = false, contentReady = false;
+  let contentAssetsReady = false, contentReady = false;
   let contentWarmupStage = 0;
+  let preparedPosters = 0;
+  let bloomDirty = true;
+  const renderWork = { hero:0, projects:0, bloom:0 };
+  let lastProjectsFrame = '', lastPresentedFrame = '';
   let targetsInitialized = false, disposed = false;
   let assetError: unknown;
   const mainUI = own(createCanvasUI(width, height));
@@ -153,15 +158,18 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   key.shadow.bias=-0.001;key.shadow.normalBias=0.03;key.shadow.radius=3;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
   key.shadow.autoUpdate=false;key.shadow.needsUpdate=true;
-  // Opening the monitor depends only on its own resources. The gallery and
-  // later pages start loading after the reveal, without competing for bandwidth.
+  // All four destinations prepare during boot; no section starts downloading
+  // only after the visitor tries to enter it. The gallery retains two workers
+  // to bound simultaneous image decoding on mobile.
   Promise.all([heroReel.ready,computer.ready,menuSignal.ready]).then(()=>{
     if(disposed)return;
     assetsReady=true;key.shadow.needsUpdate=true;
   }).catch(error=>{if(!disposed)assetError=error;});
   Promise.all([later.ready,gallery.ready]).then(()=>{
-    if(!disposed)contentAssetsReady=true;
+    if(!disposed){contentAssetsReady=true;later.resize(w,h);}
   }).catch(error=>{if(!disposed)assetError=error;});
+  void gallery.load();
+  void later.load();
   const rim = new THREE.DirectionalLight('#94a4db', 2); rim.position.set(5, 3, -3); hero.add(rim);
   const fill = new THREE.DirectionalLight('#dad8df', 0.9); fill.position.set(1, -1, 5); hero.add(fill);
 
@@ -185,7 +193,10 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     .add(texture(heroTarget.texture,coord.sub(vec2(0,glowOffset.y))).rgb.sub(0.72).max(0)).mul(0.075);
   const phosphorBloom=own(bloom(texture(heroTarget.texture),0.22,0.1,0.72));
   const updateBloom=phosphorBloom.updateBefore.bind(phosphorBloom);
-  phosphorBloom.updateBefore=frame=>{if(firstSceneGlow.value>0)updateBloom(frame);};
+  phosphorBloom.updateBefore=frame=>{
+    if(firstSceneGlow.value>0&&bloomDirty){updateBloom(frame);bloomDirty=false;renderWork.bloom++;}
+    else return false; // A skipped FRAME update may still be needed by offscreen warmup later this frame.
+  };
   const paperPaletteMask = source.rgb.sub(color(PAPER).rgb).length().smoothstep(0.003, 0.025).oneMinus().mul(paperColorEnabled);
   const paperBalance = mix(vec3(1), vec3(...PAPER_OUTPUT_BALANCE), paperPaletteMask);
   const projectGlow=mix(float(1),float(0.25),projectLook);
@@ -224,7 +235,13 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   const projectGrain=fixedGrain.mul(0.012).add(movingGrain.mul(0.0038)).mul(vec3(1,1,0.7));
   const bootGrain=fixedGrain.mul(0.018).add(movingGrain.mul(0.005));
   const grain=mix(mix(movingGrain.mul(0.028).mul(laterGrain),projectGrain,projectLook),bootGrain,bootMix);
-  const outgoing = mix(crtScene.mul(screenMask), boot, bootMix).mul(edge).add(grain);
+  const outgoing = Fn(()=>{
+    const sceneColor=vec3(0).toVar();
+    // While the boot surface is opaque, the hidden scene does not need its
+    // multi-tap CRT treatment. The reveal uses the exact original expression.
+    If(bootMix.lessThan(1),()=>{sceneColor.assign(crtScene.mul(screenMask));});
+    return mix(sceneColor,boot,bootMix).mul(edge).add(grain);
+  })();
   // Compose after each surface's treatment: the opening removes the CRT frame
   // locally, instead of stretching the film or warping the incoming paper.
   // Both incoming and settled About use the same glass. Logical pixels keep
@@ -291,7 +308,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   let failed = false;
   let frames = 0;
   const entry:ProjectEntry={phase:0,camera:0,depth:0,turns:0,caption:0,offsetX:0,offsetY:0,visiblePanels:0};
-  const diagnostics = { storyHeight: 0, sceneHeight: 0, scrollPosition: 0, scrollLimit: 0, scrollMode: 'native', frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, assetsReady:false, contentStarted:false, contentAssetsReady:false, contentReady:false, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, projectTitle:projectTitle.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
+  const diagnostics = { storyHeight: 0, sceneHeight: 0, scrollPosition: 0, scrollLimit: 0, scrollMode: 'native', frames: 0, passes: [] as string[], scene: 'hero', travel: 0, localProgress:0, projectExit:0, headerCount:1, fontsReady:false, assetsReady:false, contentStarted:true, contentAssetsReady:false, contentReady:false, preparedPosters:0, screenCenter: [0,0,0], computer:computer.diagnostics,  ring:ring.diagnostics, gallery:gallery.diagnostics, heroReel:heroReel.diagnostics, heroPrompt:{count:0}, heroWave:heroWave.diagnostics, projectTitle:projectTitle.diagnostics, ground:ground.diagnostics, menuSignal:{active:false,progress:0}, intro:0, shaderReady:false, projectMotion:1, pointer:[0,0], cameraPointer:[0,0], cameraPosition:[0,0,0], cameraQuaternion:[0,0,0,1], entry };
 
   let lastResize = '';
   function resize(nextWidth: number, nextHeight: number) {
@@ -311,6 +328,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     projectsTarget.setSize(Math.round(w*dpr), Math.round(h*dpr));
     aboutTarget.setSize(Math.round(w*dpr), Math.round(h*dpr));
     targetsInitialized=false;
+    bloomDirty=true;lastProjectsFrame=lastPresentedFrame='';
     signalSource.setSize(Math.round(w*dpr),Math.round(h*dpr));
     menuSignal.resize(w,h,dpr);
     mainUI.resize(w,h); projectsUI.resize(w,h); bootUI.resize(w,h); navigationUI.resize(w,h);
@@ -324,24 +342,32 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     logicalPixel.value.set(1/w,1/h);
     aboutCurvature.value=w<900?0.04:0.10;
     lastUIKey = lastProjectKey = lastNavigationKey = lastAboutNavigationKey = ''; lastBoot = -1;
+    // Static model placement changes only with the viewport, not every frame.
+    const mobile=w<900;
+    computer.group.position.set(mobile?0:3,mobile?-0.802:-0.36,0);
+    computer.group.scale.setScalar(w<500?0.64:mobile?0.69:1);
+    computer.group.rotation.set(0,mobile?0:-0.67,0);
+    computer.group.updateMatrixWorld(true);
   }
   resize(width,height);
+  void fonts.then(()=>{
+    if(disposed)return;
+    fontsReady=true;diagnostics.fontsReady=true;
+    // Discard any initial fallback-font measurements before the first paint.
+    lastResize='';resize(w,h);
+  }).catch(error=>{if(!disposed)assetError=error;});
 
   function render(runtime: SceneRuntime, delta: number) {
     if (failed || disposed) return;
     if (assetError) throw assetError;
+    if(!fontsReady)return;
     if(contentReady&&!runtime.contentReady){
       runtime.contentReady=true;
       window.dispatchEvent(new Event('study-content-ready'));
     }
-    if(warmupFinished&&runtime.intro>=1&&!contentStarted){
-      contentStarted=true;
-      void gallery.load();
-      void later.load();
-    }
-    diagnostics.contentStarted=contentStarted;
     diagnostics.contentAssetsReady=contentAssetsReady;
     diagnostics.contentReady=contentReady;
+    diagnostics.preparedPosters=preparedPosters;
     diagnostics.storyHeight = runtime.storyHeight;
     diagnostics.sceneHeight = runtime.sceneHeight;
     diagnostics.scrollPosition = runtime.scrollPosition;
@@ -364,11 +390,12 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     const mobile = w < 900;
     const laterScene = state.scene.id !== 'hero' && state.scene.id !== 'projects';
     firstSceneCRT.value=laterScene?0:smooth((entry.camera-0.9)/0.1);
-    firstSceneGlow.value=laterScene?0:1;
+    firstSceneGlow.value=laterScene||bootMix.value===1?0:1;
     projectLook.value=firstSceneCRT.value;
     screenBlend.value=smooth((p-0.02)/0.25);
     const exit = state.scene.id==='projects'?sampleProjectAbout(progress):0;
     aperture.update(exit,w,h,runtime.time,runtime.reducedMotion);
+    if(!laterScene){
     projectTitle.update(runtime, entry.caption, state.scene.id==='projects'||(state.scene.id==='hero'&&entry.phase>0));
     const entryStart=Math.round(runtime.projectPosition)-3;
     ring.update(runtime.projectPosition + entry.turns, mobile, entry.visiblePanels, entryStart, w / h);
@@ -382,9 +409,10 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       projectsUI.draw({mode:'projects',bootProgress:1,projectIndex:runtime.projectIndex,headerVisible:false});
       lastProjectKey = projectKey;
     }
+    }
     // No extra timer or per-frame texture upload: repaint only on a 450 ms beat
     // while this UI is visible. Other scenes keep their existing cached artwork.
-    if (state.scene.id === 'hero' && !document.hidden) {
+    if (state.scene.id === 'hero' && !document.hidden && (runtime.intro>0.6||!lastUIKey)) {
       // Match the reference's wall-clock interval even after a delayed frame.
       const promptCount = heroPromptCount(performance.now() / 1000, runtime.reducedMotion);
       const uiKey = `${w}/${h}/${promptCount}`;
@@ -427,11 +455,8 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     heroText.rotation.y=pointer.x*0.045*parallax;heroText.rotation.x=-pointer.y*0.03*parallax;
     heroText.material.opacity=smooth((runtime.intro-0.65)/0.35)*(1-smooth((titleTravel-0.12)/0.5));
     heroWave.update(runtime.time,!runtime.reducedMotion&&!document.hidden&&state.scene.id==='hero'&&heroText.material.opacity>0);
-    computer.group.position.set(mobile ? 0 : 3, mobile ? -0.802 : -0.36, 0);
-    computer.group.scale.setScalar(w<500 ? 0.64 : mobile ? 0.69 : 1);
-    computer.group.rotation.set(0, mobile ? 0 : -0.67, 0);
-    computer.group.updateMatrixWorld(true);
     heroReel.update(!assetsReady||runtime.reducedMotion||document.hidden||runtime.intro<0.8||screenBlend.value>=1||laterScene);
+    if(!laterScene&&(bootMix.value<1||!warmupFinished)){
     // The monitor remains luminous during its FBO handoff. The showreel uses
     // exact frame colors; the static project preview uses its own screenshot average.
     projectTint.copy(gallery.averageColors[runtime.projectIndex]).lerp(projectAmbient,.65);
@@ -472,6 +497,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       if(!mobile)camera.rotateZ(-0.07*(1-move));
     }else camera.quaternion.slerpQuaternions(startQuaternion,endQuaternion,move);
     applyHeroParallax(camera,cameraPointer.x,cameraPointer.y,parallax);
+    }
     projectCamera.position.set(0,0,ring.layout.cameraDistance);
     projectCamera.lookAt(0,0,0);
     projectCamera.rotation.z=0;
@@ -484,29 +510,38 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       if(!targetsInitialized){
         // The composite samples both targets even with their mix at zero.
         // Allocate valid textures without drawing or compiling the later scenes.
-        for(const target of [projectsTarget,aboutTarget]){
+        for(const target of [heroTarget,projectsTarget,aboutTarget]){
           renderer.setRenderTarget(target);renderer.clear();
         }
         targetsInitialized=true;
       }
       if(laterScene)gallery.update(ring.mediaIndices,true);
       if(!laterScene&&contentReady)gallery.update(entry.phase<0.52?entryMediaIndices:ring.mediaIndices,p===0||runtime.reducedMotion||document.hidden);
+      const projectFrameKey=`${lastResize}/${p}/${runtime.projectPosition}/${runtime.projectMotion}/${runtime.projectFrom}/${runtime.projectTarget}/${runtime.projectIndex}/${runtime.reducedMotion}/${mobile&&!runtime.reducedMotion?runtime.time:0}`;
       if(!laterScene&&contentReady&&p>0) {
         if(exit>0&&!runtime.reducedMotion) {
           later.render('about-us',0,runtime,aboutTarget);
           renderer.setRenderTarget(aboutTarget);renderer.autoClear=false;renderer.render(aboutNavigation,uiCamera);
           diagnostics.passes.push('about-preview');
         }
+        if(lastProjectsFrame!==projectFrameKey){
         renderer.setRenderTarget(projectsTarget);
         renderer.autoClear = true; renderer.render(projectBackdrop,uiCamera);
         renderer.autoClear = false; renderer.render(projects,projectCamera); renderer.render(projectUI,uiCamera);renderer.render(projectTitle.scene,uiCamera);
+        renderWork.projects++;
+        lastProjectsFrame=projectFrameKey;
+        }
         diagnostics.passes.push('projects');
       }
+      const presentedKey=`${projectFrameKey}/${lastNavigationKey}/${runtime.intro}`;
+      const presentScene=bootMix.value<1&&(state.scene.id!=='projects'||lastPresentedFrame!==presentedKey);
+      if(presentScene){
       renderer.setRenderTarget(heroTarget);
       renderer.autoClear = true;
       if(state.scene.id === 'hero' && (runtime.reducedMotion?p<1:entry.camera<1)) {
         renderer.render(backdrop,uiCamera);
         renderer.autoClear = false; renderer.render(hero,camera); renderer.render(heroUI,uiCamera);
+        renderWork.hero++;
         diagnostics.passes.push('hero');
       } else if(laterScene) {
         later.render(state.scene.id,state.localProgress,runtime,heroTarget);
@@ -518,6 +553,9 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       }
       renderer.setRenderTarget(heroTarget); renderer.autoClear=false;
       if(runtime.intro>0.08)renderer.render(navigation,uiCamera);
+      bloomDirty=true;
+      lastPresentedFrame=presentedKey;
+      }else if(state.scene.id==='projects')diagnostics.passes.push('projects-present');
       renderer.autoClear = true;
       if(runtime.menuSignalActive||!warmupFinished){
         renderer.setRenderTarget(signalSource);quad.render(renderer);
@@ -533,13 +571,31 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
       cameraPointer.toArray(diagnostics.cameraPointer);camera.position.toArray(diagnostics.cameraPosition);camera.quaternion.toArray(diagnostics.cameraQuaternion);
       if(assetsReady&&!warmupStarted){
         warmupStarted=true;
+        // Pipeline caches include the target's format and sample count. Prepare
+        // the actual offscreen view, not the browser's output framebuffer.
+        renderer.setRenderTarget(heroTarget);
+        camera.position.copy(startCamera);camera.quaternion.copy(startQuaternion);camera.updateMatrixWorld();
         renderer.compileAsync(hero,camera)
-          .then(()=>{if(!disposed){warmupFinished=true;diagnostics.shaderReady=true;}})
+          .then(()=>{if(!disposed)heroCompiled=true;})
           .catch(error=>{if(!disposed)assetError=error;});
       }
-      if(contentAssetsReady&&contentStarted&&contentWarmupStage<4){
-        // Warm one destination per frame offscreen. The visible hero and the
-        // approved transitions are untouched; navigation unlocks only afterwards.
+      if(heroCompiled&&!warmupFinished){
+        camera.position.copy(startCamera);camera.quaternion.copy(startQuaternion);camera.updateMatrixWorld();
+        renderer.setRenderTarget(heroTarget);renderer.autoClear=true;renderer.render(backdrop,uiCamera);
+        renderer.autoClear=false;renderer.render(hero,camera);renderer.render(heroUI,uiCamera);renderer.render(navigation,uiCamera);
+        // Prepare the same final treatment offscreen once. During the opaque
+        // boot it does not run again until the monitor starts revealing.
+        const savedBoot=bootMix.value,savedGlow=firstSceneGlow.value;
+        try{
+          bootMix.value=0;firstSceneGlow.value=1;bloomDirty=true;
+          renderer.setRenderTarget(signalSource);renderer.autoClear=true;quad.render(renderer);
+        }finally{bootMix.value=savedBoot;firstSceneGlow.value=savedGlow;}
+        warmupFinished=true;diagnostics.shaderReady=true;
+      }else if(contentAssetsReady&&preparedPosters<gallery.textures.length){
+        renderer.initTexture(gallery.textures[preparedPosters++]);
+      }else if(contentAssetsReady&&contentWarmupStage<5){
+        // Prepare every destination, including the curl shader, before opening
+        // navigation. One stage per frame bounds synchronous upload work.
         const stage=contentWarmupStage++;
         if(stage===0){
           renderer.setRenderTarget(projectsTarget);renderer.autoClear=true;
@@ -548,9 +604,13 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
           renderer.render(projectTitle.scene,uiCamera);
         }else if(stage===1)later.render('contact',0,runtime,aboutTarget);
         else if(stage===2)later.render('about-us',0,runtime,aboutTarget);
-        else Promise.all([renderer.compileAsync(projects,projectCamera),renderer.compileAsync(projectTitle.scene,uiCamera)])
-          .then(()=>{if(!disposed)contentReady=true;})
-          .catch(error=>{if(!disposed)assetError=error;});
+        else if(stage===3)later.render('about-us',0.86,{...runtime,reducedMotion:false},aboutTarget);
+        else {
+          renderer.setRenderTarget(projectsTarget);
+          Promise.all([renderer.compileAsync(projects,projectCamera),renderer.compileAsync(projectTitle.scene,uiCamera)])
+            .then(()=>{if(!disposed)contentReady=true;})
+            .catch(error=>{if(!disposed)assetError=error;});
+        }
       }
       worldCenter.toArray(diagnostics.screenCenter);
     } catch(error) { failed = true; throw error; }
@@ -558,7 +618,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   }
   const copyMaterial = own(new THREE.MeshBasicNodeMaterial({ map: projectsTarget.texture }));
   const screenCopy = own(new THREE.QuadMesh(copyMaterial));
-  return { render, resize, diagnostics, get isReady(){return assetsReady&&warmupFinished;}, dispose() {
+  return { render, resize, diagnostics:Object.assign(diagnostics,{renderWork}), get isReady(){return fontsReady&&assetsReady&&warmupFinished&&contentReady;}, dispose() {
     if(disposed)return;disposed=true;
     resources.dispose();
     hero.clear(); projects.clear();

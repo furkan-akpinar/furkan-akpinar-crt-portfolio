@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { brotliCompressSync, brotliDecompressSync, constants, gzipSync, gunzipSync } from 'node:zlib';
+import { createAssetRoots, releaseAssetGroups } from './release-assets.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const exported = path.join(root, 'out');
@@ -11,13 +13,17 @@ const marker = '.portfolio-build.json';
 const maxBytes = 25 * 1024 * 1024;
 const assets = [
   '_headers', 'model-credits.html', 'social-preview.png',
-  'fonts/STIXTwoText-Variable.ttf', 'fonts/STIXTwoText-Italic-Variable.ttf', 'fonts/VT323-Regular.ttf',
   'fonts/OFL-STIXTwoText.txt', 'fonts/OFL-VT323.txt',
-  'images/about-team.webp', 'images/people-atlas.webp', 'images/projects/posters',
-  'models/commodore64/web', 'models/commodore64/mobile', 'models/commodore64/ATTRIBUTION.txt',
-  'media/hero-pinterest/showreel.mp4', 'media/hero-pinterest/light-tracks.json',
-  'textures/no-signal-label.webp',
 ];
+const assetRoots = createAssetRoots(path.join(root, 'public'));
+for (const name of readdirSync(path.join(root, 'public/fonts'))) {
+  if (!name.endsWith('.woff2')) continue;
+  const hash = name.match(/\.([a-f0-9]{12})\.woff2$/)?.[1];
+  assert.ok(hash, `Immutable font must have a content hash: ${name}`);
+  const bytes = readFileSync(path.join(root, 'public/fonts', name));
+  assert.equal(createHash('sha256').update(bytes).digest('hex').slice(0, 12), hash, `Font content hash changed: ${name}`);
+  assets.push(`fonts/${name}`);
+}
 
 function copyReleaseAsset(source, destination) {
   // Avoid Node 22.18's Windows fs.cpSync crash on non-ASCII source paths.
@@ -60,6 +66,29 @@ for (const relative of assets) {
   copyReleaseAsset(source, path.join(output, relative));
 }
 
+for (const [group, entries] of Object.entries(releaseAssetGroups)) {
+  for (const relative of entries) {
+    copyReleaseAsset(path.join(root, 'public', relative), path.join(output, assetRoots[group], relative));
+  }
+}
+
+// Public glTF files retain their original relative paths and integrity manifests.
+// Only the transport representation is additional; neither geometry nor textures
+// are quantized or re-encoded at runtime.
+const geometry = path.join(output, assetRoots.models, 'models/commodore64/web/geometry.bin');
+const geometryBytes = readFileSync(geometry);
+const brotli = brotliCompressSync(geometryBytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } });
+const gzip = gzipSync(geometryBytes, { level: 9 });
+assert.ok(brotliDecompressSync(brotli).equals(geometryBytes), 'Brotli geometry must be byte-identical.');
+assert.ok(gunzipSync(gzip).equals(geometryBytes), 'Gzip geometry must be byte-identical.');
+writeFileSync(`${geometry}.br`, brotli);
+writeFileSync(`${geometry}.gz`, gzip);
+
+// Credits remain a normal HTML route; the linked attribution belongs to the same
+// versioned model tree. Hashed Next chunks are never rewritten after compilation.
+const credits = path.join(output, 'model-credits.html');
+writeFileSync(credits, readFileSync(credits, 'utf8').replaceAll('/models/', `${assetRoots.models}/models/`));
+
 function inventory(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const file = path.join(directory, entry.name);
@@ -74,5 +103,5 @@ function inventory(directory) {
   });
 }
 const files = inventory(output);
-writeFileSync(path.join(output, marker), JSON.stringify({ owner: 'furkan-portfolio-static', files }, null, 2) + '\n');
+writeFileSync(path.join(output, marker), JSON.stringify({ owner: 'furkan-portfolio-static', assetRoots, files }, null, 2) + '\n');
 console.log(`Static release: ${files.length} files, ${(files.reduce((total, file) => total + file.bytes, 0) / 1024 / 1024).toFixed(2)} MiB. Every asset is below 25 MiB.`);

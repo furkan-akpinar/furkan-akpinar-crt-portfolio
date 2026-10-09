@@ -28,8 +28,9 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
   let settled = false;
   let cancelImage: (() => void) | undefined;
   let resolveReady: () => void;
+  let rejectReady: (reason: Error) => void;
   const images = new Map<string, HTMLImageElement>();
-  const ready = new Promise<void>((resolve) => { resolveReady = resolve; })
+  const ready = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; })
     .then(() => { if (!disposed) draw(); });
 
   function wrapped(text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
@@ -46,12 +47,14 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
     return y + lineHeight;
   }
 
-  function person(cell: number, x: number, y: number, w: number, h: number) {
+  function portrait(x: number, y: number, w: number, h: number) {
     const image = images.get(portfolio.media.people);
     if (!image) return;
+    // The sparse portrait retains its original atlas extent so browser
+    // downsampling stays identical; only this first cell contains content.
     const sw = image.naturalWidth / 4;
     const sh = image.naturalHeight / 2;
-    ctx.drawImage(image, (cell % 4) * sw, Math.floor(cell / 4) * sh, sw, sh, x, y, w, h);
+    ctx.drawImage(image, 0, 0, sw, sh, x, y, w, h);
   }
 
   function stripes(y: number, baseWidth: number, mobile: boolean) {
@@ -106,7 +109,7 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
       portfolio.about.paragraphs.forEach((paragraph) => {
         y = wrapped(paragraph, 30, y, 330, 24) + 25;
       });
-      person(0, 209, y - 3, 163, 217);
+      portrait(209, y - 3, 163, 217);
       y += 250;
     } else {
       const startY = y;
@@ -114,7 +117,7 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
       portfolio.about.paragraphs.forEach((paragraph, index) => {
         bottom = Math.max(bottom, wrapped(paragraph, [52, 430, 808][index], startY, 338, 31));
       });
-      person(0, 1180, startY + 36, 240, 320);
+      portrait(1180, startY + 36, 240, 320);
       y = Math.max(bottom + 95, startY + 440);
     }
     y = stripes(y, baseWidth, mobile) + (mobile ? 75 : 150);
@@ -141,10 +144,10 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
     ctx.font = `400 ${mobile ? 18 : 25}px ${SERIF}`;
     y = wrapped(portfolio.about.closingParagraph, mobile ? 30 : 78, y, mobile ? 330 : 655, mobile ? 24 : 31);
     if (mobile) {
-      person(0, 79, y + 25, 232, 309);
+      portrait(79, y + 25, 232, 309);
       y += 379;
     } else {
-      person(0, 920, closingTop - 70, 410, 547);
+      portrait(920, closingTop - 70, 410, 547);
       y = Math.max(y + 90, closingTop + 525);
     }
     return y;
@@ -190,9 +193,14 @@ export function createPaperUI(viewportWidth: number, viewportHeight: number, def
       image.onload = null;
       image.onerror = null;
       cancelImage = undefined;
-      if (loaded && !disposed) images.set(portfolio.media.people, image);
-      else image.removeAttribute('src');
-      resolveReady();
+      if (loaded && !disposed) {
+        images.set(portfolio.media.people, image);
+        resolveReady();
+      } else {
+        image.removeAttribute('src');
+        if (disposed) resolveReady();
+        else rejectReady(new Error('Hakkımda fotoğrafı yüklenemedi.'));
+      }
     };
     cancelImage = () => finish(false);
     image.onload = () => finish(true);

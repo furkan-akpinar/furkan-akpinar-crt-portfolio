@@ -2,6 +2,8 @@
 
 7 Ekim 2026 · Furkan Akpınar CRT Portföy
 
+Bu rapor 7 Ekim tarihindeki kaynak paketini kaydeder. Sonraki performans değişikliklerinin güncel davranışı README.md ve qa/README.md içinde açıklanır; aşağıdaki boyut ve test sayıları tarihsel teslim ölçümleridir.
+
 Bu teslim, çalışan portföyün ayrı bir kaynak kopyasıdır. Asıl çalışma klasöründeki uygulama, Git geçmişi ve canlı yayın değiştirilmedi. Başlangıç sürümü: `0b15432cf1c880d7a78de7580b7e86ef9e4003fa`.
 
 ## İnceleme kapsamı

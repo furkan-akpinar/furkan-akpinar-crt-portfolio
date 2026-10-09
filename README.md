@@ -105,15 +105,17 @@ Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun 
 
 ### Kaynakların yaşam döngüsü
 
-- Giriş, yalnızca kendi model, video ve efekt kaynaklarını bekler. Proje görselleri ve sonraki bölümlerin görsel kaynakları giriş animasyonu tamamlandıktan sonra yüklenir; sahneler görünmeden önce hazırlanır.
-- Sonraki bölümler hazırlanırken verilen gezinme isteği bekletilir ve hazır olduğunda mevcut geçiş animasyonuyla uygulanır. En son istek geçerlidir; Ana Sayfa seçimi veya ters kaydırma bekleyen isteği iptal eder.
+- Model, video, fontlar, yedi proje görseli ve Hakkımda/İletişim kaynakları açılış sırasında hazırlanır. İntro; gerekli dokular GPU'ya yüklendikten ve bölüm çizimleri hazırlandıktan sonra açılır. Bölümler arasında ek bir hazırlık ekranı yoktur.
+- Fontların gerçek ölçüleri ilk çizimden önce beklenir; bağımsız medya indirmeleri bu bekleyişle eşzamanlı ilerler. Açılışı atlamak kaynak hazırlığını atlamaz. Hazırlık sırasında gelen erken gezinme istekleri güvenle bekletilir veya iptal edilir.
 - Cihaz piksel oranı en fazla **1,5** olarak kullanılır.
 - Mobilde modelin **1024px**, masaüstünde **4K** dokuları seçilir. Geometri, malzemeler ve ışık düzeni ortaktır; ekran döndürülürken ikinci bir model yüklenmez.
 - Sahne çıktıları görünürlük ve geçiş ihtiyaçlarına göre üretilir.
 - Proje görselleri bir kez yüklenir; tekrar eden paneller aynı dokuları paylaşır.
-- Proje posterleri, Hakkımda/İletişim görselleri ve NO SIGNAL etiketi özgün çözünürlük ve pikselleri koruyan kayıpsız WebP dosyalarıdır. Bu 10 görselin toplam aktarım boyutu 18,66 MB'tan 12,88 MB'a düşürülmüştür; sosyal paylaşım kapağı PNG olarak korunur.
+- Yedi proje posteri ve NO SIGNAL etiketi kayıpsız WebP dosyalarıdır. Portrelerde kullanılan pikseller ve özgün koordinatlar korunur; kullanılmayan alanlar boşaltılarak aktarım azaltılır. Bu 10 görsel toplam 10,54 MB'tır; sosyal paylaşım kapağı PNG olarak korunur.
+- Tam karakter kapsamlı WOFF2 fontları, içerik hash'li dosya adlarıyla ön yüklenir. Türkçe karakterler, değişken ağırlıklar ve özgün font aileleri korunur.
 - Proje görselleri en fazla ikişer adet çözülür; çizimden sonra kaynak görüntüler serbest bırakılır. Mobil film dokuları 1024px, masaüstü dokuları 1536px genişliğindedir.
-- Başlık dokuları seçim veya ekran ölçüsü değiştiğinde güncellenir.
+- Başlık dokuları yalnız gerekli satırları tutar ve seçim veya ekran ölçüsü değiştiğinde güncellenir. Hero okları kendi alanında yeniden çizilir; menü kıvrımın gerçek renk değişimlerine göre yenilenir.
+- Durağan proje sahnesinin çıktısı ve bloom sonucu yeniden kullanılır. Hareketli mobil başlıklar, video, CRT grain ve geçişler kendi saatlerinde ilerlemeye devam eder.
 - Video, görünmediğinde veya azaltılmış hareket tercih edildiğinde duraklatılır.
 - Geometri, materyal, doku, render hedefi ve olay dinleyicileri kapatılırken temizlenir.
 - Kurulum yarıda başarısız olduğunda oluşturulmuş kaynaklar da temizlenir. Aynı ölçüdeki resize bildirimleri yüzeyleri yeniden oluşturmaz.
@@ -162,7 +164,7 @@ Uygulamanın çalışması için bir veritabanı, sunucu API’si veya istemciye
 | --- | --- |
 | `npm run dev` | Next.js geliştirme sunucusunu açar. |
 | `npm run typecheck` | TypeScript tür kontrolünü çalıştırır. |
-| `npm run lint` | Uygulama ve test dosyalarını ESLint ile denetler. |
+| `npm run lint` | Uygulama, test, Worker, hazırlama scriptleri ve Next yapılandırmasını ESLint ile denetler. |
 | `npm test` | Node’un yerleşik test çalıştırıcısını kullanır. |
 | `npm run check` | Tür kontrolü, lint ve testleri birlikte çalıştırır. |
 | `npm run build` | Bilgisayar varlığını hazırlar, Next.js statik çıktısını üretir ve yayın paketini oluşturur. |
@@ -191,6 +193,10 @@ Worker adı **`furkan-akpinar-crt-portfolio`** olarak yapılandırılır. Başka
 
 Cloudflare’ın dosya başına **25 MiB** sınırı için büyük bilgisayar GLB dosyası yayın hazırlığında glTF, binary veri ve görsel dosyalarına ayrılır. Masaüstü 4K paketi özgün baytları korur; mobil paket aynı geometriyle 1024px doku türevleri kullanır. Her iki paketin hash ve dönüşüm kayıtları derlemede doğrulanır. Yayın paketi geliştirme kayıtlarından ayrı hazırlanır.
 
+Model, görsel, video ve CRT varlıkları derleme sırasında içeriklerine göre sürümlenen `/assets/<hash>/` dizinlerine alınır. Modelin göreli glTF bağlantıları aynı dizin ağacında korunur. Adresler Next.js derlemesinden önce belirlenir; derlenmiş JavaScript dosyaları sonradan değiştirilmez. İçeriği değişmeyen gruplar bir yıllık `immutable` tarayıcı önbelleğini kullanır. Fontlar da içerik hash'i taşıyan WOFF2 adlarıyla yayımlanır.
+
+Geometri verisinin Brotli ve gzip kopyaları paketleme sırasında üretilir ve açılmış baytlarının özgün dosyayla eşitliği doğrulanır. `worker/asset-worker.ts` yalnız geometri isteklerinde tarayıcının desteklediği biçimi seçer; model detayı değişmez. `HEAD`, koşullu `304` yanıtları ve özgün bayt aralığı istekleri korunur. Diğer dosyaları Static Assets doğrudan sunar. Bu davranışı yerelde doğrulamak için Next geliştirme sunucusu yerine `npm run build` ardından `npm run preview` kullanılmalıdır.
+
 ## Proje yapısı
 
 ```text
@@ -215,7 +221,7 @@ qa/                       Üretim tarayıcısı ve dokunma doğrulama araçları
 
 Metinler, menü etiketleri, proje sırası ve dış bağlantılar [`src/content/portfolio.ts`](src/content/portfolio.ts) içinde tutulur. Her proje; başlık, poster, web sitesi ve GitHub hedefiyle tanımlanır.
 
-Yeni bir poster eklerken dosyayı `public/images/projects/posters/` altına yerleştirip proje kaydındaki `image` alanını güncelleyin. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez. Farklı bir varlık klasörü kullanılacaksa `scripts/package-static.mjs` içindeki yayın listesi de güncellenmelidir.
+Yeni bir poster eklerken dosyayı `public/images/projects/posters/` altına yerleştirip proje kaydındaki `image` alanını güncelleyin. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez. Farklı bir varlık klasörü kullanılacaksa `scripts/release-assets.ts` içindeki yayın grupları da güncellenmelidir.
 
 Sahne aralıkları [`src/config/scenes.ts`](src/config/scenes.ts), görsel davranışlar ise `src/components/scene/` altında ayrı sorumluluklara bölünmüştür. İçerik değişikliklerinden sonra başlıkların sığması, bağlantılar ve mobil yerleşim kontrol edilmelidir.
 

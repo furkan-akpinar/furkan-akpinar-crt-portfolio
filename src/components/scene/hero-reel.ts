@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { publicAssetUrl } from '../../lib/public-asset.ts';
 import { createVideoTextures } from './video-textures';
 import {
   HERO_REEL_CELL_COUNT,
@@ -11,8 +12,8 @@ import {
   type HeroReelLightTrack,
 } from './hero-reel-sampling';
 
-const REEL_URL = '/media/hero-pinterest/showreel.mp4';
-const LIGHT_TRACK_URL = '/media/hero-pinterest/light-tracks.json';
+const REEL_URL = publicAssetUrl('/media/hero-pinterest/showreel.mp4');
+const LIGHT_TRACK_URL = publicAssetUrl('/media/hero-pinterest/light-tracks.json');
 const ACTIVE_VIDEO = [0] as const;
 
 /** One decoder and one presentation clock for all six short hero clips. */

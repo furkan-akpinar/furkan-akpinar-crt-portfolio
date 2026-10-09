@@ -3,6 +3,7 @@ import { attribute, color, mix, texture, uniform, uv, vec2 } from "three/tsl";
 import type { SceneId } from "@/config/scenes";
 import type { SceneRuntime } from "./runtime";
 import { createCanvasUI } from "./canvas-ui";
+import { contactLayout } from "./contact-layout";
 import { createPaperUI } from "./paper-ui";
 import { paperScrollOffset } from "./paper-action";
 import { curlFrame, curlVertex } from "./page-curl-geometry";
@@ -47,7 +48,11 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   const diagnostics = { passes: [] as string[], scene: "about-us" as SceneId, progress: 0, curl: 0, assetErrors: [] as string[], proxies: ["video-calibrated intact page curl"] };
 
   function drawUI(id: LaterId, progress: number, runtime: SceneRuntime) {
-    const key = `${w}/${h}/${runtime.storyHeight}/${runtime.visibleHeight}/${Math.round(progress * 500)}/${runtime.projectIndex}/${runtime.reducedMotion}`;
+    const layout = contactLayout(w, h, progress, runtime.storyHeight, runtime.visibleHeight);
+    // The virtual scroll range is longer than the contact artwork's travel.
+    // Once its physical offset stops, keep the existing bitmap and GPU upload.
+    const scrollKey = layout.offset === layout.travel ? 'settled' : Math.round(progress * 500);
+    const key = `${w}/${h}/${runtime.storyHeight}/${runtime.visibleHeight}/${scrollKey}`;
     if (uiKeys.get(id) !== key) {
       ui[id].draw({ mode: id, sceneProgress: progress, storyHeight: runtime.storyHeight, visibleHeight: runtime.visibleHeight, bootProgress: 1, projectIndex: runtime.projectIndex, headerVisible: false });
       uiKeys.set(id, key);
@@ -63,6 +68,9 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
   // One continuous sheet. Front/back share positions and unchanged UVs.
   const curlGeometry = own(new THREE.PlaneGeometry(2, 2, 160, 100));
   const curlOriginal = curlGeometry.attributes.position.array.slice();
+  // Reuse one sample across all 16,261 vertices instead of allocating an
+  // object per point on every animated frame. The deformation math is intact.
+  const curlSample = { x: 0, y: 0, z: 0, shade: 1, backShade: 1 };
   const shades=new THREE.BufferAttribute(new Float32Array(curlGeometry.attributes.position.count),1).setUsage(THREE.DynamicDrawUsage);
   const backShades=new THREE.BufferAttribute(new Float32Array(curlGeometry.attributes.position.count),1).setUsage(THREE.DynamicDrawUsage);
   curlGeometry.setAttribute('curlShade',shades);curlGeometry.setAttribute('curlBackShade',backShades);
@@ -95,7 +103,7 @@ function buildLaterScenes(renderer: THREE.WebGPURenderer, width: number, height:
     if(q===lastCurl)return;lastCurl=q;
     const positions=curlGeometry.attributes.position,f=curlFrame(q,aspect);
     for(let i=0;i<positions.count;i++){
-      const v=curlVertex(curlOriginal[i*3]*aspect,curlOriginal[i*3+1],f);
+      const v=curlVertex(curlOriginal[i*3]*aspect,curlOriginal[i*3+1],f,curlSample);
       positions.setXYZ(i,v.x,v.y,v.z+.01);shades.setX(i,v.shade);backShades.setX(i,v.backShade);
     }
     positions.needsUpdate=true;shades.needsUpdate=true;backShades.needsUpdate=true;

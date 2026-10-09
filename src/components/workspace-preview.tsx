@@ -38,7 +38,8 @@ const rendererStatusText: Record<RendererStatus, string> = {
 export function WorkspacePreview() {
   const container = useRef<HTMLDivElement>(null);
   const viewportProbe = useRef<HTMLDivElement>(null);
-  const runtime = useRef(createRuntime());
+  const [initialRuntime] = useState(createRuntime);
+  const runtime = useRef(initialRuntime);
   const headerRef = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const firstNavigationLink = useRef<HTMLButtonElement>(null);
@@ -47,12 +48,12 @@ export function WorkspacePreview() {
   const projectControls = useRef<HTMLDivElement>(null);
   const contactControls = useRef<HTMLDivElement>(null);
   const introTimeline = useRef<gsap.core.Timeline | null>(null);
+  const skipIntroRequested = useRef(false);
   const projectTween = useRef<gsap.core.Timeline | null>(null);
   const [status, setStatus] = useState<RendererStatus>('loading');
   const [booted, setBooted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const [contentWaiting, setContentWaiting] = useState(false);
   const [activeScene, setActiveScene] = useState<SceneId>('hero');
   const [navigation, setNavigation] = useState<NavigationLayout | null>(null);
   const [projectIndex, setProjectIndex] = useState(0);
@@ -91,9 +92,6 @@ export function WorkspacePreview() {
 
   useEffect(() => {
     let disposed = false;
-    const waitForContent = (event: Event) => {
-      setContentWaiting((event as CustomEvent<{ active: boolean }>).detail.active);
-    };
     const focusDeferredDestination = (event: Event) => {
       const { id } = (event as CustomEvent<{ id: SceneId }>).detail;
       // A queued request must not move focus or expose destination controls
@@ -102,11 +100,9 @@ export function WorkspacePreview() {
         if (!disposed) document.getElementById(id)?.focus({ preventScroll: true });
       });
     };
-    window.addEventListener('study-content-wait', waitForContent);
     window.addEventListener('study-content-navigation', focusDeferredDestination);
     return () => {
       disposed = true;
-      window.removeEventListener('study-content-wait', waitForContent);
       window.removeEventListener('study-content-navigation', focusDeferredDestination);
     };
   }, []);
@@ -227,7 +223,7 @@ export function WorkspacePreview() {
       });
       return;
     }
-    if (status === 'fallback' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (status === 'fallback' || skipIntroRequested.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       runtime.current.bootProgress = 1;
       runtime.current.intro = 1;
       queueMicrotask(() => setBooted(true));
@@ -255,6 +251,7 @@ export function WorkspacePreview() {
     };
     document.documentElement.addEventListener('pointerleave', resetPointer);
     window.addEventListener('blur', resetPointer);
+    const contactLinks = [...(contactControls.current?.querySelectorAll<HTMLAnchorElement>('a') ?? [])];
     const syncSceneControls = () => {
       if (!container.current) return;
       const scroll = runtime.current.controlledScroll ? runtime.current.scrollPosition : window.scrollY;
@@ -270,19 +267,22 @@ export function WorkspacePreview() {
       const aperture = sampleProjectAbout(state.progress);
       container.current.dataset.projectExiting = String(state.scene.id === 'projects' && aperture > 0);
       if (projectControls.current) projectControls.current.inert = !fallback && (state.scene.id !== 'projects' || aperture > 0);
-      if (contactControls.current) {
+      if (sceneId === 'contact' && !fallback) {
         const layout = contactLayout(window.innerWidth, runtime.current.sceneHeight, state.localProgress, runtime.current.storyHeight, runtime.current.visibleHeight);
-        for (const link of contactControls.current.querySelectorAll<HTMLAnchorElement>('a')) {
+        for (const link of contactLinks) {
           const bounds = link.dataset.contactAction === 'github' ? layout.github : layout.invitation;
-          Object.assign(link.style, {
+          const styles = {
             left: `${bounds.x}px`,
             top: `${bounds.y}px`,
             width: `${bounds.width}px`,
             height: `${bounds.height}px`
-          });
-          link.inert = fallback || sceneId !== 'contact' || bounds.y + bounds.height < 90 || bounds.y > window.innerHeight;
+          };
+          for (const key of ['left','top','width','height'] as const) {
+            if (link.style[key] !== styles[key]) link.style[key] = styles[key];
+          }
+          link.inert = bounds.y + bounds.height < 90 || bounds.y > window.innerHeight;
         }
-      }
+      } else for (const link of contactLinks) link.inert = true;
     };
     const positionSceneControls = () => {
       const bounds = heroPromptLayout(window.innerWidth, runtime.current.sceneHeight);
@@ -339,6 +339,9 @@ export function WorkspacePreview() {
   };
 
   const skipIntro = () => {
+    skipIntroRequested.current = true;
+    // Skipping the animation must never bypass complete scene preparation.
+    if (status === 'loading') return;
     introTimeline.current?.progress(1);
     runtime.current.bootProgress = 1;
     runtime.current.intro = 1;
@@ -460,9 +463,6 @@ export function WorkspacePreview() {
     >
       {portfolio.boot.version}
     </span>}
-    {contentWaiting && !fallback && <p className="content-loading-notice" role="status">
-      Bölüm hazırlanıyor…
-    </p>}
     {transitioning && <div
       className="navigation-shield"
       aria-hidden="true"

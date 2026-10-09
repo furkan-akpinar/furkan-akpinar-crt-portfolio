@@ -5,5 +5,7 @@
 *.mp4 -text
 *.bin -text
 *.ttf -text
+*.woff2 -text
+*.webp -text
 public/models/** linguist-vendored
 public/fonts/** linguist-vendored

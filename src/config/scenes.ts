@@ -34,8 +34,12 @@ export function validateTimeline(timeline: readonly SceneDefinition[]): void {
   });
 }
 
+// The authored timeline is static; validate it once, while still checking
+// caller-supplied timelines used by editors and tests on each call.
+validateTimeline(scenes);
+
 export function getSceneState(value: number, timeline: readonly SceneDefinition[] = scenes) {
-  validateTimeline(timeline);
+  if (timeline !== scenes) validateTimeline(timeline);
   const progress = clampProgress(value);
   const scene = timeline.find((entry) => progress < entry.end) ?? timeline[timeline.length - 1];
   return { scene, progress, localProgress: clampProgress((progress - scene.start) / (scene.end - scene.start)) };

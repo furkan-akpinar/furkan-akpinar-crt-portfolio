@@ -29,13 +29,14 @@ const INK = "#eee9dc";
 const SERIF = '"STIX Two Text", Georgia, serif';
 const BOOT_MONO = '"VT323", monospace';
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
+type CanvasBounds = (width: number, height: number) => { top: number; bottom: number };
 
 /**
  * Original Canvas2D artwork, uploaded into the same render pipeline as the 3D
  * scenes. This is deliberately not a screenshot of a DOM overlay. Interaction
  * and the accessible equivalent are owned by the scene's semantic controls.
  */
-export function createCanvasUI(width: number, height: number, deferredPortrait = false) {
+export function createCanvasUI(width: number, height: number, deferredPortrait = false, bounds?: CanvasBounds) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { alpha: true });
   if (!context) throw new Error("The canvas UI could not initialize its 2D context.");
@@ -49,8 +50,13 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
   let logicalWidth = 0;
   let logicalHeight = 0;
   let pixelRatio = 1;
+  let pixelTop = 0;
+  let fullPixelHeight = 1;
   let disposed = false;
   let lastOptions: UIOptions | undefined;
+  let navigation: ReturnType<typeof navigationLayout> | undefined;
+  let lastHeaderKey = '';
+  let heroArrows: { first: number; pitch: number; y: number; size: number; direction: 'right' | 'down' } | undefined;
   let portrait: HTMLImageElement | undefined;
   let portraitReady: Promise<void> | undefined;
   let cancelPortrait: (() => void) | undefined;
@@ -59,7 +65,7 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
     if (disposed) return Promise.resolve();
     const image = new Image();
     portrait = image;
-    portraitReady = new Promise<void>((resolve) => {
+    portraitReady = new Promise<void>((resolve, reject) => {
       let settled = false;
       const finish = (loaded: boolean) => {
         if (settled) return;
@@ -69,11 +75,12 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
         image.onerror = null;
         cancelPortrait = undefined;
         if (!loaded) { image.removeAttribute('src'); portrait = undefined; }
-        resolve();
+        if (loaded || disposed) resolve();
+        else reject(new Error('The contact portrait could not be prepared.'));
         if (loaded && lastOptions && !disposed) draw(lastOptions);
       };
       cancelPortrait = () => finish(false);
-      image.onload = () => finish(true);
+      image.onload = () => finish(image.naturalWidth > 0);
       image.onerror = () => finish(false);
       const timeout = setTimeout(() => finish(false), 30_000);
       image.src = portfolio.media.team;
@@ -85,14 +92,52 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
     if (disposed) return;
     const width = Math.max(1, nextWidth), height = Math.max(1, nextHeight);
     const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    // An explicit resize also invalidates font metrics when fonts finish
+    // loading without a viewport change; keep the existing backing store.
+    lastOptions = undefined;
+    lastHeaderKey = '';
+    heroArrows = undefined;
+    navigation = undefined;
     if (logicalWidth === width && logicalHeight === height && pixelRatio === ratio) return;
     logicalWidth = width;
     logicalHeight = height;
     pixelRatio = ratio;
+    fullPixelHeight = Math.round(logicalHeight * pixelRatio);
+    const crop = bounds?.(logicalWidth, logicalHeight);
+    pixelTop = crop ? Math.max(0, Math.floor(crop.top * pixelRatio)) : 0;
+    const pixelBottom = crop ? Math.min(fullPixelHeight, Math.ceil(crop.bottom * pixelRatio)) : fullPixelHeight;
     texture.dispose(); // Reallocate the GPU texture after a backing-store resize.
     canvas.width = Math.round(logicalWidth * pixelRatio);
-    canvas.height = Math.round(logicalHeight * pixelRatio);
+    canvas.height = Math.max(1, pixelBottom - pixelTop);
     texture.needsUpdate = true;
+  }
+
+  function navigationMetrics() {
+    return navigation ??= navigationLayout(logicalWidth, (text, font) => {
+      ctx.font = font;
+      return ctx.measureText(text).width;
+    }, portfolio.home);
+  }
+
+  function onPaper(options: UIOptions, x: number, y: number) {
+    return options.paperCurl === undefined ? options.headerDark : curlCovers(options.paperCurl, logicalWidth / logicalHeight, x / logicalWidth, y / logicalHeight);
+  }
+
+  function headerRasterKey(options: UIOptions) {
+    const layout = navigationMetrics();
+    // Curl progress is continuous, but each header element only has two inks.
+    // Match the exact sample points used by header() before invalidating it.
+    let surfaces = onPaper(options, layout.brand.x + (layout.logo.x + layout.logo.width - layout.brand.x) / 2, layout.brand.baseline - 12) ? '1' : '0';
+    const sample = (x: number, y: number) => { surfaces += onPaper(options, x, y) ? '1' : '0'; };
+    if (layout.compact) sample(layout.menu.x + layout.menu.width / 2, layout.menu.y + layout.menu.height / 2);
+    else {
+      for (const item of layout.links) sample(item.bounds.x + item.bounds.width / 2, item.baseline - layout.fontSize / 3);
+      ctx.font = layout.callFont;
+      sample(layout.call.textX + ctx.measureText(portfolio.home.callLabel).width / 2, layout.call.baseline - 8);
+      sample(layout.call.iconX, layout.call.iconY);
+    }
+    for (let x = 0; x < logicalWidth; x += 24) sample(Math.min(x + 12, logicalWidth), layout.height);
+    return `${surfaces}/${options.activeSection ?? 'hero'}/${options.menuOpen}/${options.hovered}`;
   }
 
   /** A newly drawn oval with offset rainbow scan lines, not a copied logo asset. */
@@ -187,7 +232,7 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
   function header(options: UIOptions) {
     const w = logicalWidth;
     const content = portfolio.home;
-    const layout = navigationLayout(w, (text, font) => { ctx.font = font; return ctx.measureText(text).width; }, content);
+    const layout = navigationMetrics();
     const activeSection = options.activeSection ?? 'hero';
     ctx.save();
     if (layout.compact && options.menuOpen) {
@@ -195,8 +240,7 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
       ctx.fillRect(0, 0, w, logicalHeight);
     }
     const inkAt = (x: number, y: number) => {
-      const onPaper = options.paperCurl === undefined ? options.headerDark : curlCovers(options.paperCurl, w / logicalHeight, x / w, y / logicalHeight);
-      return onPaper ? '#171711' : INK;
+      return onPaper(options, x, y) ? '#171711' : INK;
     };
     const setInk = (x: number, y: number) => { ctx.fillStyle = inkAt(x, y); ctx.strokeStyle = ctx.fillStyle; };
     ctx.lineWidth = 1;
@@ -295,9 +339,18 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
     ctx.fillText(portfolio.prompt, promptX, promptY);
     const pitch = prompt.arrowSize + prompt.arrowGap;
     const firstArrow = mobile ? promptX - pitch : promptX + promptWidth + 20 * desktopScale + prompt.arrowSize / 2;
-    for (let index = 0; index < (options.heroPromptCount ?? 3); index++) {
-      hollowPromptArrow(firstArrow + index * pitch, prompt.arrowY, prompt.arrowSize, prompt.arrowDirection);
-    }
+    heroArrows = { first: firstArrow, pitch, y: prompt.arrowY, size: prompt.arrowSize, direction: prompt.arrowDirection };
+    drawHeroArrows(options.heroPromptCount ?? 3);
+    ctx.restore();
+  }
+
+  function drawHeroArrows(count: number) {
+    if (!heroArrows) return;
+    const { first, pitch, y, size, direction } = heroArrows;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = INK;
+    for (let index = 0; index < count; index++) hollowPromptArrow(first + index * pitch, y, size, direction);
     ctx.restore();
   }
 
@@ -420,7 +473,7 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
     const h = logicalHeight;
     const layout = contactLayout(w, h, options.sceneProgress, options.storyHeight, options.visibleHeight);
     const { mobile, scale: contactScale, boxWidth, boxHeight, boxY, footerY } = layout;
-    const headerHeight = navigationLayout(w, (text, font) => { ctx.font = font; return ctx.measureText(text).width; }, portfolio.home).height;
+    const headerHeight = navigationMetrics().height;
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, headerHeight + 1, w, h - headerHeight);
@@ -562,10 +615,33 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
 
   function draw(options: UIOptions) {
     if (disposed) return;
+    if (options.mode === 'header') {
+      const key = headerRasterKey(options);
+      if (lastOptions?.mode === 'header' && key === lastHeaderKey) { lastOptions = options; return; }
+      lastHeaderKey = key;
+    }
+    if (options.mode === 'boot' && lastOptions?.mode === 'boot' && Math.floor(clamp(options.bootProgress) * 21) === Math.floor(clamp(lastOptions.bootProgress) * 21)) {
+      lastOptions = options;
+      return;
+    }
+    if (options.mode === 'hero' && options.headerVisible === false && lastOptions?.mode === 'hero' && lastOptions.headerVisible === false && heroArrows) {
+      // The heading and prompt are stationary artwork. A 450 ms arrow beat
+      // only clears its transparent rectangle; do not rerasterize all text.
+      if ((options.heroPromptCount ?? 3) !== (lastOptions.heroPromptCount ?? 3)) {
+        const { first, pitch, y, size } = heroArrows;
+        const padding = size / 2 + 3;
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, -pixelTop);
+        ctx.clearRect(first - padding, y - padding, 2 * (pitch + padding), 2 * padding);
+        drawHeroArrows(options.heroPromptCount ?? 3);
+        texture.needsUpdate = true;
+      }
+      lastOptions = options;
+      return;
+    }
     lastOptions = options;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, -pixelTop);
     ctx.globalAlpha = 1;
     const mobile = logicalWidth < 900;
     const scale = Math.min(logicalWidth / 1440, logicalHeight / 900);
@@ -596,5 +672,9 @@ export function createCanvasUI(width: number, height: number, deferredPortrait =
   }
 
   resize(width, height);
-  return { texture, draw, resize, preloadPortrait, dispose };
+  return { texture, draw, resize, preloadPortrait, dispose,
+    // Remap the original full-screen UV into an integer-pixel-aligned crop.
+    // Transparent padding makes out-of-bounds clamp sampling transparent too.
+    get samplingWindow() { return { scale: fullPixelHeight / canvas.height, offset: (canvas.height - fullPixelHeight + pixelTop) / canvas.height }; },
+  };
 }

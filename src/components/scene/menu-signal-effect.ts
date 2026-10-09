@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { publicAssetUrl } from '../../lib/public-asset.ts';
 import { Fn, If, float, mix, renderOutput, sRGBTransferEOTF, sin, texture, uniform, uv, vec2, vec3, vec4 } from 'three/tsl';
 
 /**
@@ -96,26 +97,39 @@ export function createMenuSignalEffect(
   const linearOutput = sRGBTransferEOTF(mix(scene, signal, envelope)) as THREE.Node<'vec3'>;
   material.fragmentNode = vec4(linearOutput, 1);
 
-  const ready = new Promise<{ labelLoaded: boolean }>(resolve => {
-    new THREE.TextureLoader().load('/textures/no-signal-label.webp', loaded => {
-      if (disposed) {
-        loaded.dispose();
-        resolve({ labelLoaded: false });
+  let cancelLabel: (() => void) | undefined;
+  const ready = new Promise<{ labelLoaded: boolean }>((resolve, reject) => {
+    const image = new Image();
+    let settled = false;
+    const finish = (loaded: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      cancelLabel = undefined;
+      if (!loaded || disposed) {
+        image.removeAttribute('src');
+        if (disposed) resolve({ labelLoaded: false });
+        else reject(new Error('NO SIGNAL görseli yüklenemedi.'));
         return;
       }
-      loaded.colorSpace = THREE.NoColorSpace;
-      loaded.minFilter = THREE.LinearFilter;
-      loaded.magFilter = THREE.LinearFilter;
-      loaded.generateMipmaps = false;
-      loaded.needsUpdate = true;
-      loadedLabel = loaded;
-      label.value = loaded;
+      const loadedTexture = new THREE.Texture(image);
+      loadedTexture.colorSpace = THREE.NoColorSpace;
+      loadedTexture.minFilter = THREE.LinearFilter;
+      loadedTexture.magFilter = THREE.LinearFilter;
+      loadedTexture.generateMipmaps = false;
+      loadedTexture.needsUpdate = true;
+      loadedLabel = loadedTexture;
+      label.value = loadedTexture;
       labelVisible.value = 1;
       resolve({ labelLoaded: true });
-    }, undefined, error => {
-      if (!disposed) console.warn('Menu transition lettering could not load; using the signal bars without a label.', error);
-      resolve({ labelLoaded: false });
-    });
+    };
+    cancelLabel = () => finish(false);
+    const timeout = setTimeout(() => finish(false), 30_000);
+    image.onload = () => finish(image.naturalWidth > 0);
+    image.onerror = () => finish(false);
+    image.src = publicAssetUrl('/textures/no-signal-label.webp');
   });
 
   return {
@@ -128,6 +142,7 @@ export function createMenuSignalEffect(
     },
     dispose() {
       disposed = true;
+      cancelLabel?.();
       placeholder.dispose();
       loadedLabel?.dispose();
       material.dispose();

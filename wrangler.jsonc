@@ -1,9 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "furkan-akpinar-crt-portfolio",
+  "main": "worker/asset-worker.ts",
   "compatibility_date": "2026-10-06",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/assets/*/models/commodore64/web/geometry.bin",
+      "/models/commodore64/web/geometry.bin"
+    ],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
