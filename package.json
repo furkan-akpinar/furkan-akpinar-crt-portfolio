@@ -23,7 +23,7 @@
     "type": "git",
     "url": "https://github.com/furkan-akpinar/furkan-akpinar-crt-portfolio.git"
   },
-  "homepage": "https://furkan-akpinar-crt-portfolio.furkan-akpinar.workers.dev/",
+  "homepage": "https://furkanakpinar.dev/",
   "overrides": {
     "sharp": "0.35.5"
   },

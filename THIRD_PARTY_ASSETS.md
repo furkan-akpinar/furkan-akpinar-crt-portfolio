@@ -38,4 +38,4 @@ Kaynak bağlantıları lisans veya eser sahipliği belgesi değildir. Bu klipler
 
 Proje posterleri, Hakkımda ve iletişim görselleri projeye sağlanan içeriklerdir. Posterler `public/images/projects/posters` altında değiştirilmeden tutulur. Görsellerin ve içlerindeki marka/ürünlerin hakları, uygulama kaynak kodundan ayrıdır.
 
-Aynı bildirimlerin site üzerindeki özeti: [Varlık kaynakları](https://furkan-akpinar-crt-portfolio.furkan-akpinar.workers.dev/model-credits).
+Aynı bildirimlerin site üzerindeki özeti: [Varlık kaynakları](https://furkanakpinar.dev/model-credits).

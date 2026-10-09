@@ -2,7 +2,7 @@
 
 Frontend geliştirme ve web tasarımı çalışmalarımı, etkileşimli bir CRT ekran deneyimi içinde sunan kişisel portföyüm. Üç boyutlu bilgisayar sahnesi, kesintisiz proje filmi, hareketli tipografi ve kaydırmaya bağlı geçişler aynı görsel dünyada buluşuyor.
 
-[**Canlı site ↗**](https://furkan-akpinar-crt-portfolio.furkan-akpinar.workers.dev/) · [**Kaynak kod**](https://github.com/furkan-akpinar/furkan-akpinar-crt-portfolio) · [**GitHub profilim**](https://github.com/furkan-akpinar)
+[**Canlı site ↗**](https://furkanakpinar.dev/) · [**Kaynak kod**](https://github.com/furkan-akpinar/furkan-akpinar-crt-portfolio) · [**GitHub profilim**](https://github.com/furkan-akpinar)
 
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-18181b?style=flat-square&logo=nextdotjs&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-18181b?style=flat-square&logo=react&logoColor=61dafb)

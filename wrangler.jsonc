@@ -9,5 +9,11 @@
   },
   "workers_dev": true,
   "preview_urls": true,
-  "send_metrics": false
+  "send_metrics": false,
+  "routes": [
+    {
+      "pattern": "furkanakpinar.dev",
+      "custom_domain": true
+    }
+  ]
 }

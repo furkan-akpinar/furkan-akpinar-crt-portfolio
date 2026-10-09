@@ -5,7 +5,7 @@ import "./globals.css";
 import { portfolio } from "@/content/portfolio";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://furkan-akpinar-crt-portfolio.furkan-akpinar.workers.dev/'),
+  metadataBase: new URL('https://furkanakpinar.dev/'),
   title: `${portfolio.home.name} — ${portfolio.home.role}`,
   description: portfolio.home.description,
   authors: [{ name: portfolio.name, url: portfolio.github }],
