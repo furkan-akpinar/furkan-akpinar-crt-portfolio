@@ -3,7 +3,7 @@ async page => {
   const checks = [], errors = [], failed = [];
   let faultInjection = false;
   let faultPage = null;
-  const posterRoute = '**/images/projects/posters/01-karakter-studyo.webp';
+  const posterRoute = /\/images\/projects\/posters\/01-karakter-studyo\.(1024|1536)\.(avif|webp|jpg)$/;
   const abortPoster = route => route.abort();
   const check = (name, pass, detail) => checks.push({ name, pass: Boolean(pass), detail });
   const onPageError = error => { if (!faultInjection) errors.push(error.message); };

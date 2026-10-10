@@ -19,7 +19,41 @@ async function flushMicrotasks() {
   for (let turn = 0; turn < 8; turn++) await Promise.resolve();
 }
 
-function installBrowser(t: TestContext) {
+for (const [supported, format] of [[['avif', 'webp'], 'avif'], [['webp'], 'webp'], [[], 'jpg']] as const) {
+  test(`native format selection uses ${format} at mobile resolution`, async t => {
+    const browser = installBrowser(t, [...supported]);
+    const gallery = createProjectImages(1024);
+    t.after(() => gallery.dispose());
+    assert.equal(browser.images.length, 2, 'the same two-worker pool is shared by every format');
+    assert.ok(browser.active().every(image => image.currentSrc.endsWith(`.1024.${format}`)));
+    browser.images[0].succeed();
+    await flushMicrotasks();
+    assert.ok(gallery.diagnostics.sources[0].endsWith(`.1024.${format}`));
+    assert.equal(gallery.diagnostics.fallbackCount, 0);
+  });
+}
+
+test('an AVIF decode failure retries WebP then JPEG without creating duplicate textures', async t => {
+  const browser = installBrowser(t);
+  const gallery = createProjectImages(1536);
+  t.after(() => gallery.dispose());
+  const first = browser.images[0];
+  const texture = gallery.textures[0];
+  assert.ok(first.currentSrc.endsWith('.1536.avif'));
+  first.onerror?.();
+  assert.ok(first.currentSrc.endsWith('.1536.webp'));
+  first.onerror?.();
+  assert.ok(first.currentSrc.endsWith('.1536.jpg'));
+  assert.equal(gallery.diagnostics.error, null);
+  first.succeed();
+  await flushMicrotasks();
+  assert.equal(gallery.diagnostics.fallbackCount, 2);
+  assert.equal(gallery.textures[0], texture);
+  assert.ok(gallery.diagnostics.sources[0].endsWith('.1536.jpg'));
+  assert.equal(gallery.diagnostics.readyCount, 1);
+});
+
+function installBrowser(t: TestContext, supportedFormats = ['avif', 'webp']) {
   const images: FakeImage[] = [];
   const canvases: { width: number; height: number }[] = [];
   let draws = 0;
@@ -29,12 +63,26 @@ function installBrowser(t: TestContext) {
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
     src = '';
+    parent: FakeElement | null = null;
+    get currentSrc() {
+      const supported = this.parent?.children.find(child => child instanceof FakeElement && (child.type === 'image/jpeg' || supportedFormats.includes(child.type.replace('image/', ''))));
+      return supported instanceof FakeElement ? supported.srcset : this.src;
+    }
     constructor() { images.push(this); }
     removeAttribute(name: string) { if (name === 'src') this.src = ''; }
     succeed() { this.onload?.(); }
+    failAll() { for (let attempt = 0; attempt < 3 && this.onerror; attempt++) this.onerror(); }
+  }
+  class FakeElement {
+    children: Array<FakeElement | FakeImage> = [];
+    type = '';
+    srcset = '';
+    append(child: FakeElement | FakeImage) { this.children.push(child); if (child instanceof FakeImage) child.parent = this; }
+    replaceChildren() { for (const child of this.children) if (child instanceof FakeImage) child.parent = null; this.children = []; }
   }
   const document = {
     createElement(tag: string) {
+      if (tag === 'picture' || tag === 'source') return new FakeElement();
       assert.equal(tag, 'canvas');
       const canvas = {
         width: 0, height: 0,
@@ -59,7 +107,7 @@ function installBrowser(t: TestContext) {
     });
   }
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  return { images, canvases, get draws() { return draws; }, active: () => images.filter(image => image.src !== '') };
+  return { images, canvases, get draws() { return draws; }, active: () => images.filter(image => image.src !== '' && image.onload !== null) };
 }
 
 test('deferred screenshots wait without spending request deadlines and start one shared worker pool', async t => {
@@ -117,7 +165,7 @@ test('failed deferred loading cannot restart or upload images through late callb
   const completion = gallery.ready.then(() => 'ready', error => error as Error);
   gallery.load();
   const callbacks = browser.active().map(image => image.onload);
-  browser.images[0].onerror?.();
+  browser.images[0].failAll();
   const error = await completion;
   assert.ok(error instanceof Error);
 
@@ -193,7 +241,7 @@ test('an image error rejects immediately and clears the remaining active deadlin
   const gallery = createProjectImages(128);
   t.after(() => gallery.dispose());
   const completion = gallery.ready.then(() => 'ready', error => error as Error);
-  browser.images[0].onerror?.();
+  browser.images[0].failAll();
   const error = await completion;
   assert.ok(error instanceof Error);
   assert.match(error.message, /yüklenemedi/);

@@ -8,7 +8,14 @@ const assetRoots = process.env.NODE_ENV === 'production'
 
 const nextConfig: NextConfig = {
   output: 'export',
-  turbopack: { root: process.cwd() },
+  turbopack: {
+    root: process.cwd(),
+    resolveAlias: {
+      // Fiber's unused default renderer otherwise retains a second rendering engine.
+      // Subpaths such as three/webgpu, three/tsl and three/addons stay unchanged.
+      three: { browser: './src/lib/three-browser.ts' },
+    },
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,

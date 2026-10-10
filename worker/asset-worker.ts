@@ -1,3 +1,6 @@
+import { serveVideoRange } from './video-range.ts';
+import { HERO_REEL_ASSET } from './hero-reel-asset.ts';
+
 type Encoding = 'br' | 'gzip' | 'identity';
 type AssetBinding = { fetch(request: Request): Promise<Response> };
 type WorkerRequest = Request & { cf?: { clientAcceptEncoding?: string } };
@@ -33,9 +36,14 @@ function varyByEncoding(headers: Headers) {
 }
 
 const geometryPath = /^(?:\/assets\/[a-f0-9]{20})?\/models\/commodore64\/web\/geometry\.bin$/;
+const videoPath = /^(?:\/assets\/[a-f0-9]{20})?\/media\/hero-pinterest\/showreel\.mp4$/;
 
 export async function serveAsset(request: WorkerRequest, assets: AssetBinding): Promise<Response> {
   const url = new URL(request.url);
+  if (videoPath.test(url.pathname) && ['GET', 'HEAD'].includes(request.method)) {
+    const currentReel = url.pathname === HERO_REEL_ASSET.path || url.pathname === HERO_REEL_ASSET.root + HERO_REEL_ASSET.path;
+    return serveVideoRange(request, assets, currentReel ? HERO_REEL_ASSET.bytes : undefined);
+  }
   if (!geometryPath.test(url.pathname) || !['GET', 'HEAD'].includes(request.method)) {
     return assets.fetch(request);
   }

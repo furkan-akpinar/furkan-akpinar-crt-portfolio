@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "description": "Responsive artwork. Lossy delivery variants; source composition and sampled lighting preserved.",
+  "presets": {
+    "avif": {
+      "quality": 75,
+      "effort": 6,
+      "chromaSubsampling": "4:4:4"
+    },
+    "webp": {
+      "quality": 90,
+      "effort": 6,
+      "smartSubsample": true
+    },
+    "jpg": {
+      "quality": 92,
+      "mozjpeg": true,
+      "chromaSubsampling": "4:4:4"
+    }
+  },
+  "sources": [
+    {
+      "name": "01-karakter-studyo",
+      "width": 1672,
+      "height": 941,
+      "sha256": "d70ba646d2fa02d4f3050a55ec8f5f102bed768d86d7dea64ed3d1f831ec7c57",
+      "averageColor": [
+        0.5119485294117647,
+        0.48083639705882353,
+        0.42443321078431373
+      ]
+    },
+    {
+      "name": "02-kipir",
+      "width": 1672,
+      "height": 941,
+      "sha256": "531e1f8ac13b63f8043a9aa769c8fe20eecf197a58c0219704c0af6cd0073612",
+      "averageColor": [
+        0.7339001225490196,
+        0.46890318627450983,
+        0.41574754901960786
+      ]
+    },
+    {
+      "name": "03-snow-medya",
+      "width": 1672,
+      "height": 941,
+      "sha256": "eb5cee007f5e5c3c0e42e0c91aa4add3241101d5e24efd9cba861e4561b65d52",
+      "averageColor": [
+        0.625827205882353,
+        0.6218290441176471,
+        0.6253676470588235
+      ]
+    },
+    {
+      "name": "04-ezo-eylul-sagir",
+      "width": 1672,
+      "height": 941,
+      "sha256": "8646a26e62f501a8a2e12f7e2818cf7161b38f837e12a57fe8231d38c108989c",
+      "averageColor": [
+        0.45876225490196076,
+        0.3569087009803922,
+        0.26142769607843136
+      ]
+    },
+    {
+      "name": "05-vanta-drive",
+      "width": 1672,
+      "height": 940,
+      "sha256": "5ba18b35346421d22650ef2f01be546b1c316ba631ed2ac47894bb5eca5727a7",
+      "averageColor": [
+        0.2778799019607843,
+        0.2972886029411765,
+        0.31953125
+      ]
+    },
+    {
+      "name": "06-kome",
+      "width": 1672,
+      "height": 941,
+      "sha256": "b8a2316379487d7fc9710f1cb2540d1c8cb84780f7a5f335d9bb066f8a0d4592",
+      "averageColor": [
+        0.6310355392156862,
+        0.48829656862745097,
+        0.10893075980392157
+      ]
+    },
+    {
+      "name": "07-dijital-ajans",
+      "width": 1672,
+      "height": 941,
+      "sha256": "6b14d34febcec80dab8de413beb2707e310923989af7f9d04828383ceeaef2dd",
+      "averageColor": [
+        0.1770986519607843,
+        0.21127450980392157,
+        0.16182598039215687
+      ]
+    }
+  ],
+  "files": [
+    {
+      "file": "01-karakter-studyo.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 65557,
+      "sha256": "4267ead60106fe19b98dbed4d27219539a3ba15a56a909333666024a10787b98"
+    },
+    {
+      "file": "01-karakter-studyo.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 96124,
+      "sha256": "f9631ca67b46005ebd63f00eeb0d66dd3a66edcf3613365165aeb7546c17905a"
+    },
+    {
+      "file": "01-karakter-studyo.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 148999,
+      "sha256": "837cdebf341a078edae9d756baec830621b95b7cc15af1a32047acef04ef7624"
+    },
+    {
+      "file": "01-karakter-studyo.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 111593,
+      "sha256": "18b528ab184f338946fcbde89eaea7d27d2f93d981beb92c36cecb8c1dcf1b93"
+    },
+    {
+      "file": "01-karakter-studyo.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 167662,
+      "sha256": "e2c3deed0ce66184026c0801aa778d5149ae462bb2a643a11517467957e185d7"
+    },
+    {
+      "file": "01-karakter-studyo.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 272141,
+      "sha256": "c4ae9815340a5582a51d9a22c1c494036a911b8e190e613e5772c2df74cc7843"
+    },
+    {
+      "file": "02-kipir.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 43547,
+      "sha256": "b9864c89e77e1d24805502e409fc4d3b0a220c4270f93d330a5db7608dda2fff"
+    },
+    {
+      "file": "02-kipir.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 60998,
+      "sha256": "ffafafb1f55b72e6709ddb02d97b54d0829827a824aef0e3fed16de2122d6b22"
+    },
+    {
+      "file": "02-kipir.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 134544,
+      "sha256": "0acfc7a47e33e08990a8c83b756fd5ec67bc6ab3224996cb6e8eb1973aaaab75"
+    },
+    {
+      "file": "02-kipir.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 73869,
+      "sha256": "b3e2674067868a45da4f8ef9ffb3bc741882b2fc834bddf8fc7fcc1faf696097"
+    },
+    {
+      "file": "02-kipir.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 108446,
+      "sha256": "dd18a031c1d0fc76136b0f1089c63e8d81ddd79bc567039e9a66383584c1aa6b"
+    },
+    {
+      "file": "02-kipir.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 244921,
+      "sha256": "fe61423556773b848e6118a2a098dd3381e4c3164167bc36d3fa59386f630218"
+    },
+    {
+      "file": "03-snow-medya.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 97111,
+      "sha256": "07eaa2bd9612f267757801e1de3eee627eca9f1104db8b12caab60f3b64a2bbd"
+    },
+    {
+      "file": "03-snow-medya.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 138876,
+      "sha256": "abb4a20a0b12570262177251bbc17d6e2b8369200f8545ea7ec61b06144050c3"
+    },
+    {
+      "file": "03-snow-medya.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 201810,
+      "sha256": "ed97bc14b410ef3b2d209859f02363b09bf473405a3a5f70341c2edc83d59f25"
+    },
+    {
+      "file": "03-snow-medya.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 162046,
+      "sha256": "9bbcb42f6487552ceea2afcc622a5684525b20292b8dd98d6c36c6a538b6acf8"
+    },
+    {
+      "file": "03-snow-medya.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 241486,
+      "sha256": "d5c71999f5760deeb9e12b9e86abe10a2f291a936629e8e0f197dd5aaf10f852"
+    },
+    {
+      "file": "03-snow-medya.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 372704,
+      "sha256": "40d2bee6819f28429a2d9efe230310400cbcca78e0941c0080afc14fbce14dc0"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 85506,
+      "sha256": "ef37eabef71f3151f8a235f6bb420de3e78fa392facdf82b98aa104b0664100d"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 117038,
+      "sha256": "c338d80da455a5a4cae5d9fae9c9aa9e49730510d31ea53b17175fc7e1deca62"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 172123,
+      "sha256": "4d045d88c19e335f862c9da9544be1aa321e6df238e7eba2b68d6ac651a89b99"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 158756,
+      "sha256": "1a4f44037716c83d510e6ecd92976e4395f505440e5f23e3c84d3271d3784d40"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 218594,
+      "sha256": "45248fdfaf7c078df5b6142d44c958a896f1537d5f18df97f006842020af2f60"
+    },
+    {
+      "file": "04-ezo-eylul-sagir.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 344746,
+      "sha256": "82c8356cf173b1a1264256855ae15d610366ccfe283267ba79b5a09e935262f5"
+    },
+    {
+      "file": "05-vanta-drive.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 63665,
+      "sha256": "0d593454226cdc7a4792726c39012cbad82c34853cb9d5741ab41a7020dbaf25"
+    },
+    {
+      "file": "05-vanta-drive.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 92218,
+      "sha256": "6075b3a6e3578526ce424c339e9b85e1acba8034c00f7ef94ae45598135afc28"
+    },
+    {
+      "file": "05-vanta-drive.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 129381,
+      "sha256": "ecd2b73a7b9931e213554ded5da51a1dfb91afa11c9bc2489b508e30a9353ed7"
+    },
+    {
+      "file": "05-vanta-drive.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 113966,
+      "sha256": "837f1c68e9fb545adadbde82ceb779b82c69c2287387538b9abc377ab352fd26"
+    },
+    {
+      "file": "05-vanta-drive.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 164412,
+      "sha256": "695458f2802f9de55acc9af18ef11cb1996b3ad614322e1f62b3840c8b62fd83"
+    },
+    {
+      "file": "05-vanta-drive.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 252747,
+      "sha256": "d3e8d3fca1d8b4ae29ae68a4d998123b4f76b08d42817a6affc001f48d062279"
+    },
+    {
+      "file": "06-kome.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 64021,
+      "sha256": "fd9cf45e3e6db1fdf0daea9039654a82df4d29275952764baf12721e3f701f22"
+    },
+    {
+      "file": "06-kome.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 91048,
+      "sha256": "0a42b204841f255ac63f90d52c49291a67e3b2b4bdb752aef71614e9f0c19d8e"
+    },
+    {
+      "file": "06-kome.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 177770,
+      "sha256": "a566cdab2d88540425f3c846dc793bda9a0cea1c414deed873c5032eb72af338"
+    },
+    {
+      "file": "06-kome.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 111247,
+      "sha256": "afc103f5b7c2a637b4ddad7e537f73dec3b55a9125dd24c95f3559ebc3c74f86"
+    },
+    {
+      "file": "06-kome.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 164752,
+      "sha256": "d25a4555b30a6fdb504ad2550550875746f7225bed3c959b4f893197911fb19c"
+    },
+    {
+      "file": "06-kome.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 331764,
+      "sha256": "cf0f4de8599e3f7b44cc8a09a225a0027a4300de6373f380007e3adcc2a98f26"
+    },
+    {
+      "file": "07-dijital-ajans.1024.avif",
+      "width": 1024,
+      "height": 576,
+      "bytes": 45552,
+      "sha256": "0dde97e127b377844a903a95bf87c7a164f18716deaa70d776f87441b38da246"
+    },
+    {
+      "file": "07-dijital-ajans.1024.webp",
+      "width": 1024,
+      "height": 576,
+      "bytes": 66826,
+      "sha256": "a069a77bf9b85db719a2f8fb13eb14bf254efdb62d158bddebf244f25b216524"
+    },
+    {
+      "file": "07-dijital-ajans.1024.jpg",
+      "width": 1024,
+      "height": 576,
+      "bytes": 111769,
+      "sha256": "e6427060c55e9e941b51d4ee68331b24861f0557f176e34d6d4c67f3354e9a2f"
+    },
+    {
+      "file": "07-dijital-ajans.1536.avif",
+      "width": 1536,
+      "height": 864,
+      "bytes": 76613,
+      "sha256": "49b44de174453c55b86058e9a61efa35a4d1ad9ff9ca77e5cd5bdcbefe67c442"
+    },
+    {
+      "file": "07-dijital-ajans.1536.webp",
+      "width": 1536,
+      "height": 864,
+      "bytes": 118802,
+      "sha256": "30e3221dc80eebb14d95faeaf417096c78ab923853dbb568028759e3599912b1"
+    },
+    {
+      "file": "07-dijital-ajans.1536.jpg",
+      "width": 1536,
+      "height": 864,
+      "bytes": 203500,
+      "sha256": "3e686aa43996bf21e645e27df23461df68ff7279d929358841472deead3bd336"
+    }
+  ]
+}

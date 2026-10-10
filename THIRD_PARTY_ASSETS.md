@@ -36,6 +36,6 @@ Kaynak bağlantıları lisans veya eser sahipliği belgesi değildir. Bu klipler
 
 ## Portföy görselleri
 
-Proje posterleri, Hakkımda ve iletişim görselleri projeye sağlanan içeriklerdir. Posterler `public/images/projects/posters` altında değiştirilmeden tutulur. Görsellerin ve içlerindeki marka/ürünlerin hakları, uygulama kaynak kodundan ayrıdır.
+Proje posterleri, Hakkımda ve iletişim görselleri projeye sağlanan içeriklerdir. Posterlerin kompozisyonu korunarak 1024/1536px AVIF, WebP ve JPEG yayın sürümleri `public/images/projects/posters` altında tutulur. Bu sürümler kayıplı sıkıştırılır; kaynak ve çıktı hash'leri `scripts/project-images.manifest.json` içindedir. Görsellerin ve içlerindeki marka/ürünlerin hakları, uygulama kaynak kodundan ayrıdır.
 
 Aynı bildirimlerin site üzerindeki özeti: [Varlık kaynakları](https://furkanakpinar.dev/model-credits).

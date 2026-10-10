@@ -24,9 +24,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="tr">
       <head>
-        <link rel="preload" href="/fonts/STIXTwoText-Variable.0bc5ea7347a0.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/STIXTwoText-Italic-Variable.81bf90b78b72.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/VT323-Regular.7be16f26185d.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/STIXTwoText-Variable.72f5d1276962.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/STIXTwoText-Italic-Variable.971179dd0e68.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/VT323-Regular.558e194d0f8d.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body>{children}</body>
     </html>

@@ -8,7 +8,9 @@
     "binding": "ASSETS",
     "run_worker_first": [
       "/assets/*/models/commodore64/web/geometry.bin",
-      "/models/commodore64/web/geometry.bin"
+      "/models/commodore64/web/geometry.bin",
+      "/assets/*/media/hero-pinterest/showreel.mp4",
+      "/media/hero-pinterest/showreel.mp4"
     ],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"

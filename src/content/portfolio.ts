@@ -1,4 +1,5 @@
 import { publicAssetUrl } from '../lib/public-asset.ts';
+import { projectArtwork } from './project-artwork.ts';
 
 /** Personal portfolio copy and user-supplied project artwork, in display order. */
 const navigation = [
@@ -24,13 +25,13 @@ export const portfolio = {
   github: 'https://github.com/furkan-akpinar',
   projectsIntro: 'Arayüz, etkileşim ve web tasarımı çalışmalarım. Her projenin kaynak koduna ve canlı sitesine buradan ulaşabilirsin.',
   projects: [
-    { title: 'KARAKTER STÜDYO', href: 'https://karakter-studyo.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/karakter-studyo', image: publicAssetUrl('/images/projects/posters/01-karakter-studyo.webp'), cropRight: 0, color: '#141414' },
-    { title: 'KIPIR', href: 'https://kipir-studio.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/kipir-studio', image: publicAssetUrl('/images/projects/posters/02-kipir.webp'), cropRight: 0, color: '#ff4e33' },
-    { title: 'Snow Medya', href: 'https://snow-medya.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/snow-medya', image: publicAssetUrl('/images/projects/posters/03-snow-medya.webp'), cropRight: 0, color: '#141b17' },
-    { title: 'Ezo Eylül Sağır', href: 'https://furkan-akpinar.github.io/ezo-eylul-sagir-interactive/', repository: 'https://github.com/furkan-akpinar/ezo-eylul-sagir-interactive', image: publicAssetUrl('/images/projects/posters/04-ezo-eylul-sagir.webp'), cropRight: 0, color: '#3a3227' },
-    { title: 'VANTA DRIVE', href: 'https://vanta-drive.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/vanta-drive', image: publicAssetUrl('/images/projects/posters/05-vanta-drive.webp'), cropRight: 0, color: '#0c121c' },
-    { title: 'KOME', href: 'https://kome-japanese-culture.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar', image: publicAssetUrl('/images/projects/posters/06-kome.webp'), cropRight: 0, color: '#ffd600' },
-    { title: 'Furkan Akpınar · Dijital Ajans', href: 'https://furkan-akpinar-dijital-ajans.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/furkan-akpinar-dijital-ajans', image: publicAssetUrl('/images/projects/posters/07-dijital-ajans.webp'), cropRight: 0, color: '#101815' },
+    { title: 'KARAKTER STÜDYO', href: 'https://karakter-studyo.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/karakter-studyo', ...projectArtwork[0], cropRight: 0, color: '#141414' },
+    { title: 'KIPIR', href: 'https://kipir-studio.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/kipir-studio', ...projectArtwork[1], cropRight: 0, color: '#ff4e33' },
+    { title: 'Snow Medya', href: 'https://snow-medya.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/snow-medya', ...projectArtwork[2], cropRight: 0, color: '#141b17' },
+    { title: 'Ezo Eylül Sağır', href: 'https://furkan-akpinar.github.io/ezo-eylul-sagir-interactive/', repository: 'https://github.com/furkan-akpinar/ezo-eylul-sagir-interactive', ...projectArtwork[3], cropRight: 0, color: '#3a3227' },
+    { title: 'VANTA DRIVE', href: 'https://vanta-drive.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/vanta-drive', ...projectArtwork[4], cropRight: 0, color: '#0c121c' },
+    { title: 'KOME', href: 'https://kome-japanese-culture.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar', ...projectArtwork[5], cropRight: 0, color: '#ffd600' },
+    { title: 'Furkan Akpınar · Dijital Ajans', href: 'https://furkan-akpinar-dijital-ajans.furkan-akpinar.workers.dev/', repository: 'https://github.com/furkan-akpinar/furkan-akpinar-dijital-ajans', ...projectArtwork[6], cropRight: 0, color: '#101815' },
   ],
   media: {
     team: publicAssetUrl('/images/contact-portrait.webp'),

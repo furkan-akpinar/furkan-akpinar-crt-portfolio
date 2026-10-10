@@ -111,8 +111,8 @@ Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun 
 - Mobilde modelin **1024px**, masaüstünde **4K** dokuları seçilir. Geometri, malzemeler ve ışık düzeni ortaktır; ekran döndürülürken ikinci bir model yüklenmez.
 - Sahne çıktıları görünürlük ve geçiş ihtiyaçlarına göre üretilir.
 - Proje görselleri bir kez yüklenir; tekrar eden paneller aynı dokuları paylaşır.
-- Yedi proje posteri ve NO SIGNAL etiketi kayıpsız WebP dosyalarıdır. Portrelerde kullanılan pikseller ve özgün koordinatlar korunur; kullanılmayan alanlar boşaltılarak aktarım azaltılır. Bu 10 görsel toplam 10,54 MB'tır; sosyal paylaşım kapağı PNG olarak korunur.
-- Tam karakter kapsamlı WOFF2 fontları, içerik hash'li dosya adlarıyla ön yüklenir. Türkçe karakterler, değişken ağırlıklar ve özgün font aileleri korunur.
+- Yedi proje posteri 1024/1536px AVIF, WebP ve JPEG türevlerinden tarayıcıya uygun olanıyla sunulur. Kayıplı AVIF türevlerinin toplamı mobilde 465 KB, masaüstünde 808 KB'tır; kadraj ve özgün en-boy oranı korunur. NO SIGNAL etiketi kayıpsız WebP olarak kalır. Portrelerde kullanılan pikseller ve özgün koordinatlar korunur; kullanılmayan alanlar boşaltılarak aktarım azaltılır. Sosyal paylaşım kapağı PNG olarak korunur.
+- Latin/Türkçe kapsamına göre alt kümelenmiş WOFF2 fontları, içerik hash'li dosya adlarıyla ön yüklenir. Üç font toplam 199.520 bayttır; Türkçe karakterler, değişken ağırlıklar ve özgün harf şekilleri korunur.
 - Proje görselleri en fazla ikişer adet çözülür; çizimden sonra kaynak görüntüler serbest bırakılır. Mobil film dokuları 1024px, masaüstü dokuları 1536px genişliğindedir.
 - Başlık dokuları yalnız gerekli satırları tutar ve seçim veya ekran ölçüsü değiştiğinde güncellenir. Hero okları kendi alanında yeniden çizilir; menü kıvrımın gerçek renk değişimlerine göre yenilenir.
 - Durağan proje sahnesinin çıktısı ve bloom sonucu yeniden kullanılır. Hareketli mobil başlıklar, video, CRT grain ve geçişler kendi saatlerinde ilerlemeye devam eder.
@@ -195,7 +195,7 @@ Cloudflare’ın dosya başına **25 MiB** sınırı için büyük bilgisayar GL
 
 Model, görsel, video ve CRT varlıkları derleme sırasında içeriklerine göre sürümlenen `/assets/<hash>/` dizinlerine alınır. Modelin göreli glTF bağlantıları aynı dizin ağacında korunur. Adresler Next.js derlemesinden önce belirlenir; derlenmiş JavaScript dosyaları sonradan değiştirilmez. İçeriği değişmeyen gruplar bir yıllık `immutable` tarayıcı önbelleğini kullanır. Fontlar da içerik hash'i taşıyan WOFF2 adlarıyla yayımlanır.
 
-Geometri verisinin Brotli ve gzip kopyaları paketleme sırasında üretilir ve açılmış baytlarının özgün dosyayla eşitliği doğrulanır. `worker/asset-worker.ts` yalnız geometri isteklerinde tarayıcının desteklediği biçimi seçer; model detayı değişmez. `HEAD`, koşullu `304` yanıtları ve özgün bayt aralığı istekleri korunur. Diğer dosyaları Static Assets doğrudan sunar. Bu davranışı yerelde doğrulamak için Next geliştirme sunucusu yerine `npm run build` ardından `npm run preview` kullanılmalıdır.
+Geometri verisinin Brotli ve gzip kopyaları paketleme sırasında üretilir ve açılmış baytlarının özgün dosyayla eşitliği doğrulanır. `worker/asset-worker.ts` geometri isteklerinde tarayıcının desteklediği biçimi seçer; model detayı değişmez. `HEAD`, koşullu `304` yanıtları ve özgün bayt aralığı istekleri korunur. Monitör videosunda Static Assets aralık isteğini tam dosyayla yanıtladığında Worker yalnız istenen baytları akış üzerinden `206` yanıtıyla iletir. Bu yol tüm videoyu belleğe almaz; dosya boyutu ve içerik kökü build sırasında SHA-256 ile doğrulanır. Diğer dosyaları Static Assets doğrudan sunar. Bu davranışı yerelde doğrulamak için Next geliştirme sunucusu yerine `npm run build` ardından `npm run preview` kullanılmalıdır.
 
 ## Proje yapısı
 
@@ -212,7 +212,7 @@ src/
 └── lib/                  Paylaşılan hesaplama fonksiyonları
 public/                   Posterler, fontlar, modeller ve medya
 tests/                    TypeScript testleri
-scripts/                  Kayıpsız varlık hazırlama ve statik paket doğrulama
+scripts/                  Varlık hazırlama, bütünlük ve statik paket doğrulama
 qa/                       Üretim tarayıcısı ve dokunma doğrulama araçları
 .github/media/            README ekran görüntüleri
 ```
@@ -221,7 +221,13 @@ qa/                       Üretim tarayıcısı ve dokunma doğrulama araçları
 
 Metinler, menü etiketleri, proje sırası ve dış bağlantılar [`src/content/portfolio.ts`](src/content/portfolio.ts) içinde tutulur. Her proje; başlık, poster, web sitesi ve GitHub hedefiyle tanımlanır.
 
-Yeni bir poster eklerken dosyayı `public/images/projects/posters/` altına yerleştirip proje kaydındaki `image` alanını güncelleyin. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez. Farklı bir varlık klasörü kullanılacaksa `scripts/release-assets.ts` içindeki yayın grupları da güncellenmelidir.
+Posterler 1024 ve 1536 piksel genişlikte AVIF, WebP ve JPEG olarak hazırlanır. Film yükleyicisi, çizim çözünürlüğüne uygun boyutu ve tarayıcının desteklediği ilk formatı seçer; normal yüklemede yalnız bir sürüm indirilir. AVIF veya WebP çözümlenemediğinde sonraki formata geçilir. Yedi görsel de yüklenip GPU'ya hazırlandıktan sonra intro açılır; bölüm geçişlerinde hazırlık bildirimi gösterilmez.
+
+Yayın görselleri kayıplı sıkıştırılır; kadraj ve özgün en-boy oranı korunur. Ekran/zemin renk geçişleri sıkıştırılmış görsellerden tekrar hesaplanmaz: özgün görsellerin 16×16 tarayıcı örnekleri `src/content/project-artwork.ts` içinde saklanır. Film mevcut içerik dizisini sırasıyla tekrarlar; görsel değiştirmek için geometri veya animasyon koduna müdahale etmek gerekmez.
+
+Yeni posterleri özgün dosyalardan üretmek için `node scripts/prepare-project-images.mjs --source-dir <özgün-webp-klasörü> --color-metadata <renk-örnekleri.json>` kullanın. Renk dosyası her görsel için `name`, `width`, `height` ve 0–1 aralığında sRGB `average` üçlüsünü içerir. Betik teslim sürümlerini, kaynak/çıktı hash manifestini ve içerik verisini birlikte üretir; özgün dosyalar yayın klasörünün dışında tutulur. `node scripts/prepare-project-images.mjs --verify` normal derlemede çalışır ve kaynak arşivine ihtiyaç duymaz. Farklı bir varlık klasörü kullanılacaksa `scripts/release-assets.ts` içindeki yayın grupları da güncellenmelidir.
+
+WOFF2 fontları Latin/Türkçe kapsamına göre alt kümelenir; özgün harf şekilleri, değişken ağırlıklar ve hinting korunur. Hazırlama ve doğrulama akışı [`scripts/FONTS.md`](scripts/FONTS.md) içinde açıklanır. Türkçe karakterlerin yanı sıra noktalama, oklar ve kullanılan arayüz sembolleri bütünlük testlerine dahildir.
 
 Sahne aralıkları [`src/config/scenes.ts`](src/config/scenes.ts), görsel davranışlar ise `src/components/scene/` altında ayrı sorumluluklara bölünmüştür. İçerik değişikliklerinden sonra başlıkların sığması, bağlantılar ve mobil yerleşim kontrol edilmelidir.
 

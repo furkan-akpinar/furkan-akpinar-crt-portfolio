@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync, brotliDecompressSync, constants, gzipSync, gunzipSync } from 'node:zlib';
 import { createAssetRoots, releaseAssetGroups } from './release-assets.ts';
+import { HERO_REEL_ASSET } from '../worker/hero-reel-asset.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const exported = path.join(root, 'out');
@@ -16,6 +17,10 @@ const assets = [
   'fonts/OFL-STIXTwoText.txt', 'fonts/OFL-VT323.txt',
 ];
 const assetRoots = createAssetRoots(path.join(root, 'public'));
+const heroReelBytes = readFileSync(path.join(root, 'public', HERO_REEL_ASSET.path));
+assert.equal(assetRoots.media, HERO_REEL_ASSET.root, 'Update verified reel metadata after changing media assets.');
+assert.equal(heroReelBytes.length, HERO_REEL_ASSET.bytes, 'Video range size must match the published reel.');
+assert.equal(createHash('sha256').update(heroReelBytes).digest('hex'), HERO_REEL_ASSET.sha256, 'Video range metadata must match the published reel bytes.');
 for (const name of readdirSync(path.join(root, 'public/fonts'))) {
   if (!name.endsWith('.woff2')) continue;
   const hash = name.match(/\.([a-f0-9]{12})\.woff2$/)?.[1];

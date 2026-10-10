@@ -105,11 +105,17 @@ assert.match(texture.headers['cache-control'], /immutable/);
 
 const videoPath = `${release.assetRoots.media}/media/hero-pinterest/showreel.mp4`;
 const video = await request(videoPath, { Range: 'bytes=0-15' });
-assert.ok([200, 206].includes(video.status));
+assert.equal(video.status, 206);
 const originalVideo = readFileSync(new URL('../public/media/hero-pinterest/showreel.mp4', import.meta.url));
-assert.ok(video.body.equals(video.status === 206 ? originalVideo.subarray(0, 16) : originalVideo));
+assert.ok(video.body.equals(originalVideo.subarray(0, 16)));
+assert.equal(video.headers['content-range'], `bytes 0-15/${originalVideo.length}`);
 assert.match(video.headers['content-type'], /video\/mp4/);
+const videoResume = await request(videoPath, { Range: 'bytes=1048576-1048591' });
+assert.equal(videoResume.status, 206);
+assert.equal(videoResume.headers['content-range'], `bytes 1048576-1048591/${originalVideo.length}`);
+assert.ok(videoResume.body.equals(originalVideo.subarray(1048576, 1048592)));
 
 console.log(JSON.stringify({ base, geometryPath, results, head: true, revalidation: true, rangeStatus: range.status,
   missingVersion: true, unsupportedEncodingStatus: unavailable.status, strictNegotiationEndToEndVerified,
-  unsupportedEncodingObservation, gltfRelativeDependencies: true, videoRangeStatus: video.status }, null, 2));
+  unsupportedEncodingObservation, gltfRelativeDependencies: true, videoRangeStatus: video.status,
+  videoResumeStatus: videoResume.status }, null, 2));
