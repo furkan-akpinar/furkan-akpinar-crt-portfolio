@@ -1,0 +1,16 @@
+Furkan CRT Computer
+
+Created specifically for Furkan Akpinar's portfolio.
+The cabinet, curved display, keyboard and detail geometry were authored
+procedurally. The small surface-detail and lettering textures were generated
+for this model. No third-party mesh or texture is embedded in this file.
+
+Published file: furkan-crt-computer.glb
+Format: glTF 2.0 binary; geometry and all three textures are embedded.
+The same self-contained model is used on desktop and mobile.
+Integrity and dimensions: model-manifest.json
+Verification: node scripts/verify-computer.mjs
+
+The monitor's moving footage is supplied separately by the application.
+Its sources and usage notices are preserved in /model-credits.html and
+THIRD_PARTY_ASSETS.md; this model notice does not license that footage.

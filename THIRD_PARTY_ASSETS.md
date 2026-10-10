@@ -2,15 +2,15 @@
 
 Bu dosya, portföyün uygulama kodundan ayrı olarak model, yazı tipi ve medya kaynaklarını kaydeder. Her üçüncü taraf varlık kendi kullanım koşullarına tabidir.
 
-## Commodore 64 modeli
+## Furkan CRT bilgisayar modeli
 
-- **Eser:** [Commodore 64 || Computer (Full Pack)](https://sketchfab.com/3d-models/commodore-64-computer-full-pack-1f43612fa2d54041bbe2bdff8164c2cd)
-- **Üretici:** [dark_igorek](https://sketchfab.com/dark_igorek)
-- **Lisans:** [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
-- **Uyarlamalar:** Monitör ve klavyenin seçimi, sahne ölçeği/yerleşimi, ekran UV ve video malzemesi, aydınlatma ve materyal tepkisi.
-- **Yayın paketi:** GLB içindeki geometri ve görüntü baytları değiştirilmeden dış `.gltf`, `.bin`, PNG/JPEG dosyalarına ayrıldı. 4K dokular yeniden kodlanmadı veya küçültülmedi. Kaynak/çıktı hash'leri `public/models/commodore64/web/conversion-manifest.json` içindedir.
-- Ayrıntılı bildirim: [ATTRIBUTION.txt](public/models/commodore64/ATTRIBUTION.txt).
-- **Mobil uyarlama:** Aynı geometri, UV ve malzemelerle 1024px PNG dokular kullanılır. Renk dokuları lineer ışıkta, normal/ORM haritaları sayısal kanalları korunarak küçültüldü. Mobil kaynak/çıktı kayıtları `public/models/commodore64/mobile/conversion-manifest.json` ve aynı klasördeki `ATTRIBUTION.txt` içindedir; özgün 4K paket korunur.
+Portföye özel üretilen modelin kabini, bombeli ekranı, klavyesi ve ayrıntıları prosedürel geometriyle oluşturuldu. Yüzey ayrıntısı, tuş yazıları ve marka paneli için üç küçük doku kullanılır; üçüncü taraf bir modelin mesh veya dokuları dosyaya aktarılmadı.
+
+- **Yayın dosyası:** [furkan-crt-computer.glb](public/models/furkan-crt/furkan-crt-computer.glb). Geometri ve dokular tek GLB içinde bulunur; masaüstü ve mobil aynı dosyayı kullanır.
+- **Bütünlük kaydı:** [model-manifest.json](public/models/furkan-crt/model-manifest.json).
+- **Model bildirimi:** [ATTRIBUTION.txt](public/models/furkan-crt/ATTRIBUTION.txt).
+
+Monitörde oynatılan videolar bu modelden ayrı kaynaklardır; aşağıdaki medya bildirimleri geçerlidir.
 
 ## Yazı tipleri
 

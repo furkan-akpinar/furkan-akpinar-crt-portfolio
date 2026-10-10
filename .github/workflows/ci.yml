@@ -22,7 +22,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Verify lossless model package
-        run: node scripts/prepare-computer.mjs --verify
+      - name: Verify self-contained CRT model
+        run: node scripts/verify-computer.mjs
       - run: npm run check
       - run: npm run build

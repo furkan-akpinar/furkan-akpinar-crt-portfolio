@@ -70,7 +70,7 @@ async page => {
       cssHeight: Number.isFinite(cssHeight) ? cssHeight : null,
       scene: diagnostics?.scene, localProgress: diagnostics?.localProgress,
       projectExit: diagnostics?.projectExit, frames: diagnostics?.frames,
-      passes: diagnostics?.passes, model: diagnostics?.computer?.textureQuality, videoPaused: diagnostics?.heroReel?.paused,
+      passes: diagnostics?.passes, model: diagnostics?.computer?.assetVariant, modelSource: diagnostics?.computer?.source, videoPaused: diagnostics?.heroReel?.paused,
       canvasCount: document.querySelectorAll('.scene-canvas canvas').length,
       canvas: canvas ? { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } : null,
       hitboxes,
@@ -236,7 +236,8 @@ async page => {
       check(`${orientation}: story position preserved`, after.storyHeight > 0
         && Math.abs(after.scrollPosition / after.storyHeight - normalized) < 0.005, { portrait, after });
       check(`${orientation}: scene pose preserved`, samePose(portrait, after, 0.001), { portrait, after });
-      check(`${orientation}: one mobile canvas remains`, after.canvasCount === 1 && after.model === 'mobile', after);
+      check(`${orientation}: one mobile canvas remains`, after.canvasCount === 1 && after.model === 'shared'
+        && after.modelSource.endsWith('/models/furkan-crt/furkan-crt-computer.glb'), after);
       await screenshot(orientation);
     }
 

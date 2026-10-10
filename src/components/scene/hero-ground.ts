@@ -96,14 +96,18 @@ export function createHeroGround(model: ComputerGroundSource) {
     opacity: 0.96,
     depthWrite: false,
   });
-  // Independent footprints keep the real gap between monitor and keyboard clear.
+  // Keep the original light pool's distance from the front of the chassis,
+  // including when a shorter integrated computer replaces separate parts.
+  let floorAnchorZ = 0.8;
   void model.ready.then(()=>{
     if(disposed)return;
+    const front = Math.max(...model.groundLayout.contacts.map(footprint=>footprint.z+footprint.depth/2));
+    if(Number.isFinite(front))floorAnchorZ=front-1.67;
     for(const footprint of model.groundLayout.contacts){
       const contact = new THREE.Mesh(contactGeometry, contactMaterial);
       contact.name = 'component-contact-and-soft-penumbra';
       contact.rotation.x = -Math.PI / 2;
-      contact.position.set(footprint.x,0.007,footprint.z-0.8);
+      contact.position.set(footprint.x,0.007,footprint.z-floorAnchorZ);
       contact.scale.set(footprint.width/0.8,footprint.depth/0.8,1);
       contact.renderOrder = 1;
       group.add(contact);
@@ -148,7 +152,7 @@ export function createHeroGround(model: ComputerGroundSource) {
         maximum = Math.max(maximum, support.y);
       }
     }
-    center.set(0, model.groundLayout.floorY, 0.8).applyMatrix4(transform);
+    center.set(0, model.groundLayout.floorY, floorAnchorZ).applyMatrix4(transform);
     if(!Number.isFinite(minimum))minimum=maximum=center.y;
     const elements = transform.elements;
     const scaleX = Math.hypot(elements[0], elements[1], elements[2]);

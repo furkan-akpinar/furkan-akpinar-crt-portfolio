@@ -38,8 +38,11 @@ async page => {
     await page.setViewportSize({ width, height });
     await ready();
     const model = await page.evaluate(() => window.__sceneDiagnostics.computer);
-    check(`${width}: correct texture tier`, model.textureQuality === (width < 900 ? 'mobile' : 'desktop') && model.textures.every(t => t.width === (width < 900 ? 1024 : 4096)), model);
-    check(`${width}: unchanged geometry`, model.meshes === 7 && model.triangles === 99834);
+    check(`${width}: shared CRT asset with bounded textures`, model.assetVariant === 'shared'
+      && model.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb') && model.textures.length > 0
+      && model.textures.every(t => t.width > 0 && t.height > 0 && t.width <= 1024 && t.height <= 1024)
+      && model.textures.some(t => Math.max(t.width, t.height) === 1024), model);
+    check(`${width}: approved CRT geometry`, model.meshes === 6 && model.triangles === 9848);
     check(`${width}: one canvas and approved illumination`, await page.evaluate(() => document.querySelectorAll('.scene-canvas canvas').length === 1 && window.__sceneDiagnostics.ground.lightIntensity === 20 && window.__sceneDiagnostics.ground.floorBounce === 1.85));
     const frame = await page.evaluate(() => window.__sceneDiagnostics.heroReel.frame);
     await page.waitForTimeout(650);
@@ -89,7 +92,9 @@ async page => {
   check('wheel is not stuck after height change', true);
   await page.setViewportSize({ width: 844, height: 390 });
   await page.waitForTimeout(800);
-  check('rotation retains one mobile model', await page.evaluate(() => window.__sceneDiagnostics.computer.textureQuality === 'mobile' && document.querySelectorAll('.scene-canvas canvas').length === 1));
+  check('rotation retains one shared CRT model', await page.evaluate(() => window.__sceneDiagnostics.computer.assetVariant === 'shared'
+    && window.__sceneDiagnostics.computer.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb')
+    && document.querySelectorAll('.scene-canvas canvas').length === 1));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await ready();
   check('reduced motion pauses video', await page.evaluate(() => window.__sceneDiagnostics.heroReel.paused));
@@ -98,7 +103,9 @@ async page => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.setViewportSize({ width: 430, height: 932 });
   await ready('');
-  check('automatic backend loads mobile tier', await page.evaluate(() => window.__sceneDiagnostics.computer.textureQuality === 'mobile' && ['webgpu', 'webgl2'].includes(document.querySelector('.experience').dataset.rendererStatus)));
+  check('automatic backend loads shared CRT asset', await page.evaluate(() => window.__sceneDiagnostics.computer.assetVariant === 'shared'
+    && window.__sceneDiagnostics.computer.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb')
+    && ['webgpu', 'webgl2'].includes(document.querySelector('.experience').dataset.rendererStatus)));
   await page.screenshot({ path: 'artifacts/live-after-430-auto.png' });
   await ready();
   faultInjection = true;

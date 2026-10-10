@@ -77,17 +77,16 @@ for (const [group, entries] of Object.entries(releaseAssetGroups)) {
   }
 }
 
-// Public glTF files retain their original relative paths and integrity manifests.
-// Only the transport representation is additional; neither geometry nor textures
-// are quantized or re-encoded at runtime.
-const geometry = path.join(output, assetRoots.models, 'models/commodore64/web/geometry.bin');
-const geometryBytes = readFileSync(geometry);
-const brotli = brotliCompressSync(geometryBytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } });
-const gzip = gzipSync(geometryBytes, { level: 9 });
-assert.ok(brotliDecompressSync(brotli).equals(geometryBytes), 'Brotli geometry must be byte-identical.');
-assert.ok(gunzipSync(gzip).equals(geometryBytes), 'Gzip geometry must be byte-identical.');
-writeFileSync(`${geometry}.br`, brotli);
-writeFileSync(`${geometry}.gz`, gzip);
+// The single GLB embeds its geometry and three small textures. Sidecars change
+// only HTTP transfer encoding; the loader always receives the verified GLB.
+const model = path.join(output, assetRoots.models, 'models/furkan-crt/furkan-crt-computer.glb');
+const modelBytes = readFileSync(model);
+const brotli = brotliCompressSync(modelBytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } });
+const gzip = gzipSync(modelBytes, { level: 9 });
+assert.ok(brotliDecompressSync(brotli).equals(modelBytes), 'Brotli model must be byte-identical.');
+assert.ok(gunzipSync(gzip).equals(modelBytes), 'Gzip model must be byte-identical.');
+writeFileSync(`${model}.br`, brotli);
+writeFileSync(`${model}.gz`, gzip);
 
 // Credits remain a normal HTML route; the linked attribution belongs to the same
 // versioned model tree. Hashed Next chunks are never rewritten after compilation.

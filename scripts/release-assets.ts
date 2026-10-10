@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-/** Keep a model and its relative glTF dependencies in the same versioned tree. */
+/** Keep each release asset group under a deterministic content version. */
 export const releaseAssetGroups = {
-  models: ['models/commodore64/web', 'models/commodore64/mobile', 'models/commodore64/ATTRIBUTION.txt'],
+  models: ['models/furkan-crt'],
   images: ['images/about-portrait.webp', 'images/contact-portrait.webp', 'images/projects/posters'],
   media: ['media/hero-pinterest/showreel.mp4', 'media/hero-pinterest/light-tracks.json'],
   textures: ['textures/no-signal-label.webp'],

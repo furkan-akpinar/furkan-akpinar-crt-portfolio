@@ -2,7 +2,7 @@ async page => {
   const baseURL = new URL(page.url()).origin;
   const context = page.context();
   const mobile = page, checks = new Map(), errors = [], requests = [], rootSamples = [];
-  const planned = ['DPR 3 touch device uses mobile model', 'GPU resolution stays at the 1.5 DPR cap', 'mobile never downloads 4K textures',
+  const planned = ['DPR 3 touch device uses shared CRT asset', 'GPU resolution stays at the 1.5 DPR cap', 'mobile downloads only the single compact CRT asset',
     ...['projects', 'about-us', 'contact', 'hero'].map(scene => `touch menu ${scene}`),
     'controlled touch swipe enters projects', 'one horizontal gesture advances exactly one project', 'one reverse horizontal gesture returns exactly one project',
     'horizontal gestures preserve the story position',
@@ -20,7 +20,7 @@ async page => {
     'fresh touch swipe resumes About scrolling', 'About release momentum cannot enter the aperture',
     'aperture gesture keeps the root locked and canvas stable',
     'controlled touch swipe returns to hero',
-    'wide rotation retains mobile textures', 'no second model requested after rotation', 'all mobile stages keep the root document locked',
+    'wide rotation retains shared CRT textures', 'no second model requested after rotation', 'all mobile stages keep the root document locked',
     'touch context has no page errors', 'touch scenario completed'];
   let completed = false, apertureFingerHeld = false;
   const emulation = await context.newCDPSession(mobile);
@@ -61,11 +61,16 @@ async page => {
     await mobile.waitForFunction(() => document.querySelector('.is-ready') && window.__sceneDiagnostics?.intro === 1, null, { timeout: 120000 });
     const initial = await mobile.evaluate(() => {
       const c = document.querySelector('.scene-canvas canvas');
-      return { width: c.width, height: c.height, css: [innerWidth, innerHeight], dpr: devicePixelRatio, coarse: matchMedia('(pointer:coarse)').matches, model: window.__sceneDiagnostics.computer.textureQuality };
+      return { width: c.width, height: c.height, css: [innerWidth, innerHeight], dpr: devicePixelRatio, coarse: matchMedia('(pointer:coarse)').matches, model: window.__sceneDiagnostics.computer };
     });
-    check('DPR 3 touch device uses mobile model', initial.dpr === 3 && initial.coarse && initial.model === 'mobile', initial);
+    check('DPR 3 touch device uses shared CRT asset', initial.dpr === 3 && initial.coarse && initial.model.assetVariant === 'shared'
+      && initial.model.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb')
+      && initial.model.meshes === 6 && initial.model.triangles === 9848, initial);
     check('GPU resolution stays at the 1.5 DPR cap', initial.width <= 440 * 1.5 && initial.height <= 956 * 1.5, initial);
-    check('mobile never downloads 4K textures', requests.filter(url => url.includes('/web/images/')).length === 0, requests);
+    check('mobile downloads only the single compact CRT asset', requests.length === 1
+      && requests.every(url => new URL(url).pathname.endsWith('/models/furkan-crt/furkan-crt-computer.glb'))
+      && initial.model.textures.length > 0
+      && initial.model.textures.every(t => t.width > 0 && t.height > 0 && t.width <= 1024 && t.height <= 1024), requests);
     await snapshot();
     await mobile.screenshot({ path: 'artifacts/live-touch-dpr3-hero.png' });
     const tap = async locator => {
@@ -336,8 +341,14 @@ async page => {
     await mobile.setViewportSize({ width: 956, height: 440 });
     await emulation.send('Emulation.setDeviceMetricsOverride', {width:956,height:440,deviceScaleFactor:3,mobile:true});
     await mobile.waitForTimeout(800);
-    check('wide rotation retains mobile textures', await mobile.evaluate(() => window.__sceneDiagnostics.computer.textureQuality === 'mobile'));
-    check('no second model requested after rotation', requests.filter(url => url.endsWith('.gltf')).length === 1);
+    check('wide rotation retains shared CRT textures', await mobile.evaluate(() => {
+      const model = window.__sceneDiagnostics.computer;
+      return model.assetVariant === 'shared' && model.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb')
+        && model.meshes === 6 && model.triangles === 9848 && model.textures.length > 0
+        && model.textures.every(t => t.width > 0 && t.height > 0 && t.width <= 1024 && t.height <= 1024);
+    }));
+    check('no second model requested after rotation', requests.length === 1
+      && new URL(requests[0]).pathname.endsWith('/models/furkan-crt/furkan-crt-computer.glb'));
     await snapshot();
     check('all mobile stages keep the root document locked', rootSamples.length > 0 && rootSamples.every(state => state.scrollMode === 'controlled'
       && state.scrollY === 0 && state.documentHeight <= state.height && Number.isFinite(state.scrollPosition) && state.sceneHeight > 0), rootSamples);

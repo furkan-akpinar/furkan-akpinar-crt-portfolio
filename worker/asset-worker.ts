@@ -35,7 +35,7 @@ function varyByEncoding(headers: Headers) {
   headers.set('Vary', names.join(', '));
 }
 
-const geometryPath = /^(?:\/assets\/[a-f0-9]{20})?\/models\/commodore64\/web\/geometry\.bin$/;
+const modelPath = /^(?:\/assets\/[a-f0-9]{20})?\/models\/furkan-crt\/furkan-crt-computer\.glb$/;
 const videoPath = /^(?:\/assets\/[a-f0-9]{20})?\/media\/hero-pinterest\/showreel\.mp4$/;
 
 export async function serveAsset(request: WorkerRequest, assets: AssetBinding): Promise<Response> {
@@ -44,7 +44,7 @@ export async function serveAsset(request: WorkerRequest, assets: AssetBinding): 
     const currentReel = url.pathname === HERO_REEL_ASSET.path || url.pathname === HERO_REEL_ASSET.root + HERO_REEL_ASSET.path;
     return serveVideoRange(request, assets, currentReel ? HERO_REEL_ASSET.bytes : undefined);
   }
-  if (!geometryPath.test(url.pathname) || !['GET', 'HEAD'].includes(request.method)) {
+  if (!modelPath.test(url.pathname) || !['GET', 'HEAD'].includes(request.method)) {
     return assets.fetch(request);
   }
 
@@ -52,7 +52,7 @@ export async function serveAsset(request: WorkerRequest, assets: AssetBinding): 
   // what the browser supports; local Wrangler exposes the regular header.
   const encodings = acceptedEncodings(request.cf?.clientAcceptEncoding ?? request.headers.get('Accept-Encoding'));
   if (request.headers.has('Range') && encodings.includes('identity')) {
-    // A range addresses the original geometry bytes, not a compressed stream.
+    // A range addresses the original GLB bytes, not a compressed stream.
     const rangeHeaders = new Headers(request.headers);
     rangeHeaders.set('Accept-Encoding', 'identity');
     const response = await assets.fetch(new Request(request, { headers: rangeHeaders }));
@@ -78,7 +78,7 @@ export async function serveAsset(request: WorkerRequest, assets: AssetBinding): 
     varyByEncoding(resultHeaders);
     if (response.status >= 400) resultHeaders.set('Cache-Control', 'no-store');
     if ([200, 304].includes(response.status)) {
-      resultHeaders.set('Content-Type', 'application/octet-stream');
+      resultHeaders.set('Content-Type', 'model/gltf-binary');
       if (encoding !== 'identity') {
         resultHeaders.set('Content-Encoding', encoding);
         resultHeaders.delete('Accept-Ranges');

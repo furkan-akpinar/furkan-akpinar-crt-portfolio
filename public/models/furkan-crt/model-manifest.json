@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "file": "furkan-crt-computer.glb",
+  "bytes": 362152,
+  "sha256": "d16e2e5bf02977ebae991b9250383b2bdb936e190192542bfaac872595837710",
+  "format": "glTF 2.0",
+  "selfContained": true,
+  "screenNode": "computer-curved-crt-screen",
+  "meshes": 6,
+  "triangles": 9848,
+  "vertices": 7549,
+  "images": [
+    { "mimeType": "image/png", "bytes": 19464, "width": 128, "height": 128 },
+    { "mimeType": "image/png", "bytes": 17080, "width": 512, "height": 256 },
+    { "mimeType": "image/png", "bytes": 16684, "width": 1024, "height": 96 }
+  ]
+}

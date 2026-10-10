@@ -78,7 +78,8 @@ async page => {
       const held=await state(entry);
       check(label+': secondary images begin during boot',entry.held.length>=2&&held.d.intro===0,entry.held);
       check(label+': intro stays closed until every destination is ready',!held.booted&&!held.d.contentReady&&held.d.gallery.readyCount===0);
-      check(label+': one canvas and correct device model',held.canvases===1&&held.d.computer.textureQuality===(mobile?'mobile':'desktop'));
+      check(label+': one canvas and shared CRT asset',held.canvases===1&&held.d.computer.assetVariant==='shared'
+        &&held.d.computer.source.endsWith('/models/furkan-crt/furkan-crt-computer.glb'));
       await entry.target.evaluate(()=>window.dispatchEvent(new CustomEvent('study-navigate',
         {detail:7.5*window.__sceneDiagnostics.storyHeight})));
       await entry.target.waitForTimeout(100);
@@ -99,7 +100,8 @@ async page => {
       check(label+': section navigation needs no new content downloads',requestCount===entry.requests.filter(url=>media.test(url)).length);
       const visited=await state(entry);
       check(label+': complete film and accepted model lighting survive navigation',visited.d.ring.panelCount===17
-        &&visited.d.computer.triangles===99834&&visited.d.ground.lightIntensity===20&&visited.d.ground.floorBounce===1.85);
+        &&visited.d.computer.meshes===6&&visited.d.computer.triangles===9848
+        &&visited.d.ground.lightIntensity===20&&visited.d.ground.floorBounce===1.85);
       check(label+': correct scroll mode remains intact',mobile
         ?visited.d.scrollMode==='controlled'&&visited.scrollY===0&&visited.documentHeight<=visited.viewportHeight
         :visited.d.scrollMode==='native');
@@ -116,7 +118,7 @@ async page => {
       &&delayedReady.d.contentReady&&delayedReady.d.preparedPosters===7);
     await close(delayed);
     const fonts=await create({mobile:true,hold:/\/fonts\/.*\.woff2(?:\?|$)/});
-    check('model starts while fonts are still downloading',fonts.requests.some(url=>/\/models\/.*\.gltf/.test(url)));
+    check('model starts while fonts are still downloading',fonts.requests.some(url=>/\/models\/furkan-crt\/furkan-crt-computer\.glb(?:\?|$)/.test(url)));
     const fontState=await state(fonts);
     check('fallback font measurements never open the intro',!fontState.booted&&fontState.d.fontsReady===false);
     await release(fonts);

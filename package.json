@@ -6,7 +6,7 @@
   "description": "Furkan Akpınar's interactive portfolio with WebGPU, a cinematic CRT interface and a continuous 3D project film.",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "node scripts/prepare-computer.mjs && node scripts/prepare-mobile-computer.mjs --verify && node scripts/prepare-project-images.mjs --verify && next build && node scripts/package-static.mjs",
+    "build": "node scripts/verify-computer.mjs && node scripts/prepare-project-images.mjs --verify && next build && node scripts/package-static.mjs",
     "start": "wrangler dev --port 3256",
     "preview": "wrangler dev --port 3256",
     "deploy": "npm run build && wrangler deploy",

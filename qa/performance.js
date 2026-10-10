@@ -124,7 +124,9 @@ async page => {
   }catch(error){errors.push(error.message);}
   finally{await context.close().catch(error=>errors.push(error.message));}
   const cold=outputs[0],warm=outputs[1];
-  const geometry=cold?.responses.find(response=>response.url.endsWith('/geometry.bin')&&response.finished);
+  const modelRequests=cold?.responses.filter(response=>new URL(response.url).pathname.includes('/models/'))??[];
+  const model=modelRequests.find(response=>new URL(response.url).pathname.endsWith('/models/furkan-crt/furkan-crt-computer.glb')&&response.finished);
+  const modelResource=cold?.resources.find(resource=>resource.name===model?.url);
   const clean=run=>!run.timeout&&!run.runError&&run.consoleErrors.length===0
     &&run.failures.every(failure=>failure.allowedVideoRangeReplacement)
     &&run.responses.every(response=>response.status===null||response.status<400);
@@ -135,12 +137,16 @@ async page => {
       &&run.audit.marks.contentReady<=run.audit.marks.introStarted)},
     {name:'cold mobile readiness under 45s at 10Mbps / 80ms',pass:cold?.audit?.marks.interactive<45000},
     {name:'completed cold mobile transfer below 32MB',pass:cold?.transfer.settledComplete&&cold.transfer.settledBytes<32000000},
-    {name:'completed geometry transfer compressed below 2.4MB',pass:geometry?.bytes>0&&geometry.bytes<2400000
-      &&Object.entries(geometry.headers).some(([key,value])=>key.toLowerCase()==='content-encoding'&&['br','gzip'].includes(value))},
+    {name:'one complete 362152-byte CRT model transfers compressed below 400KB',pass:modelRequests.length===1
+      &&model?.bytes>0&&model.bytes<400000&&modelResource?.decodedBodySize===362152
+      &&Object.entries(model.headers).some(([key,value])=>key.toLowerCase()==='content-encoding'&&['br','gzip'].includes(value))
+      &&cold?.diagnostics?.computer?.assetVariant==='shared'&&cold.diagnostics.computer.meshes===6
+      &&cold.diagnostics.computer.triangles===9848},
     {name:'completed warm visit transfers under 3MB',pass:warm?.transfer.settledComplete&&warm.transfer.settledBytes<3000000},
     {name:'both visits use prepared GPU content',pass:completed&&outputs.every(run=>run.ready&&['webgpu','webgl2'].includes(run.status)
       &&run.diagnostics?.contentReady&&run.diagnostics.preparedPosters===7)},
     {name:'no timeouts, HTTP failures, or unexpected request/page errors',pass:completed&&outputs.every(clean)},
   ].map(check=>({...check,pass:Boolean(check.pass)}));
-  return {completed,passed:checks.filter(check=>check.pass).length,total:checks.length,checks,errors,runs:outputs};
+  return {completed,passed:checks.filter(check=>check.pass).length,total:checks.length,checks,errors,
+    modelTransfer:{requests:modelRequests.length,transferredBytes:model?.bytes,decodedBytes:modelResource?.decodedBodySize},runs:outputs};
 }

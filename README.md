@@ -35,7 +35,7 @@ Portföy dört ana bölümden oluşur. Bölümler arasındaki hareket, kaydırma
 
 | Bölüm | Deneyim |
 | --- | --- |
-| **Ana Sayfa** | Animasyonlu açılış, Commodore bilgisayar modeli, kavisli monitörde kısa videolar, ekran renklerine tepki veren ışık ve hafif kamera parallax’ı. |
+| **Ana Sayfa** | Animasyonlu açılış, özel modellenmiş CRT bilgisayar, kavisli monitörde kısa videolar, ekran renklerine tepki veren ışık ve hafif kamera parallax’ı. |
 | **Projeler** | Derinlikten gelen S biçimli film, tekrar eden yedi proje posteri, aktif kartla birlikte hareket eden başlık ve ayrı GitHub / web sitesi bağlantıları. |
 | **Hakkımda** | Türkçe kişisel anlatım, kullanılan teknolojiler, CRT görünümünü koruyan tipografi ve kaydırmayla kıvrılan sayfa. |
 | **İletişim** | Mavi zemin üzerinde kapanış mesajı, iletişim bilgileri, çalışma odağı ve GitHub üzerinden ulaşılabilen davet alanı. |
@@ -103,12 +103,18 @@ Monitörde sunulan video karesi, önceden hazırlanmış **4 × 3 renk örnekler
 
 Destekleyen tarayıcılarda `requestVideoFrameCallback`, diğerlerinde videonun `currentTime` değeri kullanılır. Video durduğunda, sarıldığında veya döngüye girdiğinde ışık da aynı medya zamanını izler.
 
+### Hafif 3D bilgisayar
+
+Bilgisayar; eğimli tek gövde, bombeli 4:3 CRT camı, 65 tuş, ayrı sayısal tuş takımı ve havalandırma detaylarıyla prosedürel olarak modellenmiştir. Materyal bazında birleştirilmiş **6 mesh ve 9.848 üçgen** içerir. Geometri, yüzey normal dokusu, marka şeridi ve ortak tuş yazısı atlası **362.152 baytlık tek GLB** içinde taşınır; masaüstü ve mobil aynı dosyayı kullanır.
+
+Ekran videosu GLB içine gömülmez; mevcut medya dokusu ayrı ekran yüzeyine bağlanır. Kamera hedefi ve dört alan ışığı, camın gerçek merkezi ve eğiminden hesaplanır. Böylece monitöre yaklaşma geçişi ile klavye ve zemine vuran ışık fiziksel ekranla aynı doğrultuyu izler.
+
 ### Kaynakların yaşam döngüsü
 
 - Model, video, fontlar, yedi proje görseli ve Hakkımda/İletişim kaynakları açılış sırasında hazırlanır. İntro; gerekli dokular GPU'ya yüklendikten ve bölüm çizimleri hazırlandıktan sonra açılır. Bölümler arasında ek bir hazırlık ekranı yoktur.
 - Fontların gerçek ölçüleri ilk çizimden önce beklenir; bağımsız medya indirmeleri bu bekleyişle eşzamanlı ilerler. Açılışı atlamak kaynak hazırlığını atlamaz. Hazırlık sırasında gelen erken gezinme istekleri güvenle bekletilir veya iptal edilir.
 - Cihaz piksel oranı en fazla **1,5** olarak kullanılır.
-- Mobilde modelin **1024px**, masaüstünde **4K** dokuları seçilir. Geometri, malzemeler ve ışık düzeni ortaktır; ekran döndürülürken ikinci bir model yüklenmez.
+- Bilgisayar her cihazda aynı küçük GLB ile yüklenir. Üç gömülü yüzey dokusu 128×128, 1024×96 ve 512×256 pikseldir; 4K doku paketi veya geometri sıkıştırma çözücüsü gerekmez. Ekran döndürülürken ikinci bir model yüklenmez.
 - Sahne çıktıları görünürlük ve geçiş ihtiyaçlarına göre üretilir.
 - Proje görselleri bir kez yüklenir; tekrar eden paneller aynı dokuları paylaşır.
 - Yedi proje posteri 1024/1536px AVIF, WebP ve JPEG türevlerinden tarayıcıya uygun olanıyla sunulur. Kayıplı AVIF türevlerinin toplamı mobilde 465 KB, masaüstünde 808 KB'tır; kadraj ve özgün en-boy oranı korunur. NO SIGNAL etiketi kayıpsız WebP olarak kalır. Portrelerde kullanılan pikseller ve özgün koordinatlar korunur; kullanılmayan alanlar boşaltılarak aktarım azaltılır. Sosyal paylaşım kapağı PNG olarak korunur.
@@ -147,7 +153,7 @@ npm run dev
 
 Terminalde verilen yerel adresi açın. Windows PowerShell’de komut yürütme ayarları gerektiriyorsa `npm` yerine `npm.cmd` kullanabilirsiniz.
 
-**ZIP paketinden kurulum:** Arşivi açıp `package.json` dosyasının bulunduğu `furkan-akpinar-crt-portfolio` klasöründe `npm ci` ve `npm run dev` çalıştırın; Git clone gerekmez. Paket gerekli model, görsel, video, font ve lisans dosyalarını içerir. `node_modules`, `.next`, `out`, `dist`, Git geçmişi ve eski çalışma arşivleri bilerek dahil edilmez; gerekli çıktılar komutlarla yeniden üretilir. Orijinal büyük GLB dosyası gerekli değildir: masaüstü ve mobil glTF paketleri kendi manifestleriyle doğrulanır.
+**ZIP paketinden kurulum:** Arşivi açıp `package.json` dosyasının bulunduğu `furkan-akpinar-crt-portfolio` klasöründe `npm ci` ve `npm run dev` çalıştırın; Git clone gerekmez. Paket gerekli model, görsel, video, font ve lisans dosyalarını içerir. `node_modules`, `.next`, `out`, `dist`, Git geçmişi ve eski çalışma arşivleri bilerek dahil edilmez; gerekli çıktılar komutlarla yeniden üretilir. Tek GLB bilgisayar dosyası kendi boyut, hash ve geometri manifestiyle doğrulanır.
 
 Üretim paketini yerelde görmek için:
 
@@ -191,9 +197,9 @@ Next.js uygulaması `output: 'export'` ile statik olarak üretilir. Cloudflare W
 
 Worker adı **`furkan-akpinar-crt-portfolio`** olarak yapılandırılır. Başka bir hesapta yayınlanacaksa Worker adı, statik varlık dizini ve canlı adresler ilgili yapılandırmadan birlikte güncellenmelidir.
 
-Cloudflare’ın dosya başına **25 MiB** sınırı için büyük bilgisayar GLB dosyası yayın hazırlığında glTF, binary veri ve görsel dosyalarına ayrılır. Masaüstü 4K paketi özgün baytları korur; mobil paket aynı geometriyle 1024px doku türevleri kullanır. Her iki paketin hash ve dönüşüm kayıtları derlemede doğrulanır. Yayın paketi geliştirme kayıtlarından ayrı hazırlanır.
+Bilgisayar tek, kendine yeterli GLB olarak yayımlanır. `scripts/verify-computer.mjs`, dosyanın hash'ini, boyutunu, mesh/üçgen sayısını, doku sınırlarını ve dış dosyalara bağımlı olmadığını derlemede doğrular. Yayın paketi geliştirme kayıtlarından ayrı hazırlanır.
 
-Model, görsel, video ve CRT varlıkları derleme sırasında içeriklerine göre sürümlenen `/assets/<hash>/` dizinlerine alınır. Modelin göreli glTF bağlantıları aynı dizin ağacında korunur. Adresler Next.js derlemesinden önce belirlenir; derlenmiş JavaScript dosyaları sonradan değiştirilmez. İçeriği değişmeyen gruplar bir yıllık `immutable` tarayıcı önbelleğini kullanır. Fontlar da içerik hash'i taşıyan WOFF2 adlarıyla yayımlanır.
+Model, görsel, video ve CRT varlıkları derleme sırasında içeriklerine göre sürümlenen `/assets/<hash>/` dizinlerine alınır. Adresler Next.js derlemesinden önce belirlenir; derlenmiş JavaScript dosyaları sonradan değiştirilmez. İçeriği değişmeyen gruplar bir yıllık `immutable` tarayıcı önbelleğini kullanır. Fontlar da içerik hash'i taşıyan WOFF2 adlarıyla yayımlanır.
 
 Geometri verisinin Brotli ve gzip kopyaları paketleme sırasında üretilir ve açılmış baytlarının özgün dosyayla eşitliği doğrulanır. `worker/asset-worker.ts` geometri isteklerinde tarayıcının desteklediği biçimi seçer; model detayı değişmez. `HEAD`, koşullu `304` yanıtları ve özgün bayt aralığı istekleri korunur. Monitör videosunda Static Assets aralık isteğini tam dosyayla yanıtladığında Worker yalnız istenen baytları akış üzerinden `206` yanıtıyla iletir. Bu yol tüm videoyu belleğe almaz; dosya boyutu ve içerik kökü build sırasında SHA-256 ile doğrulanır. Diğer dosyaları Static Assets doğrudan sunar. Bu davranışı yerelde doğrulamak için Next geliştirme sunucusu yerine `npm run build` ardından `npm run preview` kullanılmalıdır.
 
@@ -233,7 +239,7 @@ Sahne aralıkları [`src/config/scenes.ts`](src/config/scenes.ts), görsel davra
 
 ## Varlıklar ve atıflar
 
-Projede üçüncü taraf modeller, fontlar ve medya dosyaları da kullanılır. Bu dosyaların lisansları ve kullanım koşulları kendi kaynaklarına aittir.
+Bilgisayarın geometrisi ve küçük yüzey atlasları bu proje için hazırlanmıştır. Kullanılan üçüncü taraf font ve medya dosyalarının lisansları ve kullanım koşulları kendi kaynaklarına aittir.
 
 Kaynak ve atıf bilgileri [`THIRD_PARTY_ASSETS.md`](THIRD_PARTY_ASSETS.md) ve [model kredileri](public/model-credits.html) içinde korunur. Varlıkları yeniden kullanırken ilgili lisans ve atıf dosyalarını da birlikte değerlendirin.
 

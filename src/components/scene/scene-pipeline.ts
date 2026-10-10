@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { Fn, If, color, float, mix, mx_fractal_noise_float, sin, texture, uniform, uv, vec2, vec3, vec4 } from 'three/tsl';
-import { createCommodoreComputer } from './commodore-computer';
+import { createCrtComputer } from './crt-computer';
 import { createCanvasUI } from './canvas-ui';
 import { createLaterScenes } from './later-scenes';
 import { createProjectImages } from './project-images';
@@ -21,7 +21,6 @@ import { sampleCurlProgress } from '@/lib/about-curl';
 import { createMenuSignalEffect } from './menu-signal-effect';
 import { heroPromptCount } from './hero-prompt-motion';
 import { createHeroTextWave } from './hero-text-wave';
-import { selectComputerTextureQuality } from './model-quality';
 import { createResourceScope } from './resource-scope';
 
 const smooth = (value: number) => { const t = THREE.MathUtils.clamp(value, 0, 1); return t * t * (3 - 2 * t); };
@@ -36,12 +35,9 @@ export function createScenePipeline(renderer: THREE.WebGPURenderer, width: numbe
 function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, height: number, resources: ReturnType<typeof createResourceScope>, fonts: Promise<unknown>) {
   const own = resources.own;
   let w = width, h = height;
-  // Select before decoding any image, then retain the same model across rotations.
-  const textureQuality = selectComputerTextureQuality({
-    viewportWidth: width,
-    coarsePointer: window.matchMedia('(pointer: coarse)').matches,
-    mobileUserAgent: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
-  });
+  // Select poster resolution once; every viewport uses the same compact model.
+  const mobileAssets = width < 900 || window.matchMedia('(pointer: coarse)').matches
+    || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const time = uniform(0);
   const paperColorEnabled = uniform(0);
   const aboutCRT = uniform(0);
@@ -70,7 +66,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   const signalQuad = own(new THREE.QuadMesh(menuSignal.material));
   const aperture = createProjectAperture();
   const later = own(createLaterScenes(renderer, width, height, true));
-  const gallery = own(createProjectImages(textureQuality === 'mobile' ? 1024 : 1536, true));
+  const gallery = own(createProjectImages(mobileAssets ? 1024 : 1536, true));
   const heroReel=own(createHeroReel());
   const entryMediaIndices=[4,5,6,0];
   let assetsReady = false;
@@ -147,7 +143,7 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
   screenMaterial.clearcoatNode = glassResponse.mul(0.8274310931233314);
   screenMaterial.specularIntensityNode = glassResponse;
   screenMaterial.emissiveNode = mix(mix(preview.rgb.mul(1.12),texture(projectsTarget.texture, screenUV).rgb,screenBlend), texture(bootUI.texture, screenUV.flipY()).rgb, screenBoot).mul(scan);
-  const computer = own(createCommodoreComputer(screenMaterial, textureQuality));
+  const computer = own(createCrtComputer(screenMaterial));
   hero.add(computer.group);
   const ground=own(createHeroGround(computer));hero.add(ground.group);
   hero.add(new THREE.AmbientLight('#d1c6bf', 0.6));
@@ -344,8 +340,9 @@ function buildScenePipeline(renderer: THREE.WebGPURenderer, width: number, heigh
     lastUIKey = lastProjectKey = lastNavigationKey = lastAboutNavigationKey = ''; lastBoot = -1;
     // Static model placement changes only with the viewport, not every frame.
     const mobile=w<900;
-    computer.group.position.set(mobile?0:3,mobile?-0.802:-0.36,0);
-    computer.group.scale.setScalar(w<500?0.64:mobile?0.69:1);
+    computer.group.position.set(mobile?0:2.65,mobile?-0.802:-0.36,0);
+    const phoneScale=Math.min(0.64,0.64*(w/h)/(390/844));
+    computer.group.scale.setScalar(w<500?phoneScale:mobile?0.69:1);
     computer.group.rotation.set(0,mobile?0:-0.67,0);
     computer.group.updateMatrixWorld(true);
   }
